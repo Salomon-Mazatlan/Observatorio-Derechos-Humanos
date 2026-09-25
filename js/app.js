@@ -8,7 +8,7 @@
     indicador: "_eventos",    // "_eventos" counts visible events per polygon
     temasActivos: new Set(Object.keys(CONFIG.temas)),
     verifActivas: new Set(CONFIG.verificacion),
-    texto: "", anioMin: null, anioMax: null
+    texto: "", desde: null, hasta: null   // "YYYY-MM" or null
   };
 
   const mapa = L.map("mapa", { zoomControl: false });
@@ -60,6 +60,24 @@
     document.querySelectorAll("#sel-forma button").forEach(b =>
       b.addEventListener("click", () => { estado.forma = b.dataset.forma; marcar("#sel-forma", "forma", estado.forma); dibujar(); }));
     document.getElementById("eventos-encima").addEventListener("change", dibujar);
+    const desde = document.getElementById("desde"), hasta = document.getElementById("hasta");
+    [desde, hasta].forEach(i => i.addEventListener("change", () => {
+      estado.desde = mesValido(desde.value) ? desde.value : null;
+      estado.hasta = mesValido(hasta.value) ? hasta.value : null;
+      dibujar();
+    }));
+    document.getElementById("periodo-todo").addEventListener("click", () => {
+      desde.value = ""; hasta.value = ""; estado.desde = estado.hasta = null; dibujar();
+    });
+    habilitarTematico(false);
+  }
+
+  function mesValido(v) { return /^\d{4}-\d{2}$/.test(v); }
+
+  // Thematic controls stay visible but disabled while viewing events
+  function habilitarTematico(on) {
+    document.getElementById("indicador").disabled = !on;
+    document.querySelectorAll("#sel-forma button").forEach(b => b.disabled = !on);
   }
 
   function marcar(sel, attr, valor) {
@@ -84,7 +102,7 @@
     estado.vista = v;
     marcar("#sel-vista", "vista", v);
     const tematico = v === "tematico";
-    document.getElementById("grupo-indicador").hidden = !tematico;
+    habilitarTematico(tematico);
     document.getElementById("bloque-tematico").hidden = !tematico;
     dibujar();
   }
@@ -154,15 +172,6 @@
   }
 
   function iniciarFiltros() {
-    const anios = estado.eventos.map(e => +e.fecha.slice(0, 4)).filter(Boolean);
-    const min = document.getElementById("anio-min");
-    const max = document.getElementById("anio-max");
-    if (anios.length) { min.value = Math.min(...anios); max.value = Math.max(...anios); }
-    [min, max].forEach(i => i.addEventListener("input", () => {
-      estado.anioMin = +min.value || null;
-      estado.anioMax = +max.value || null;
-      dibujar();
-    }));
     document.getElementById("buscar").addEventListener("input", e => {
       estado.texto = e.target.value.trim().toLowerCase();
       dibujar();
@@ -190,9 +199,9 @@
   function eventoVisible(e) {
     if (!estado.temasActivos.has(e.tema)) return false;
     if (!estado.verifActivas.has(e.verificacion)) return false;
-    const anio = +e.fecha.slice(0, 4);
-    if (estado.anioMin && anio < estado.anioMin) return false;
-    if (estado.anioMax && anio > estado.anioMax) return false;
+    const mes = e.fecha.slice(0, 7);
+    if (estado.desde && mes < estado.desde) return false;
+    if (estado.hasta && mes > estado.hasta) return false;
     if (estado.texto) {
       const blob = `${e.lugar} ${e.titulo} ${e.tipo} ${e.descripcion}`.toLowerCase();
       if (!blob.includes(estado.texto)) return false;
@@ -213,7 +222,8 @@
       m.on("click", () => mostrarDetalleEvento(e));
       capaEventos.addLayer(m);
     });
-    document.getElementById("conteo").textContent = n === 1 ? "1 evento en el mapa" : `${n} eventos en el mapa`;
+    document.getElementById("conteo").textContent =
+      (n === 1 ? "1 evento en el mapa" : `${n} eventos en el mapa`) + ` (${textoPeriodo().toLowerCase()})`;
   }
 
   // Values of an indicator at the level of the current map
@@ -237,11 +247,27 @@
         datos[claveDe(f.properties)] = { valor: n, periodo: "filtro actual", ejemplo: false };
       });
     } else {
+      // Keep, per unit, the most recent value whose period falls inside the selected range
       valoresDe(estado.indicador, nivel).forEach(v => {
-        datos[nivel === "municipio" ? v.cve_ent + v.cve_mun : v.cve_ent] = { valor: v.valor, periodo: v.periodo, ejemplo: !!v.ejemplo };
+        const [ini, fin] = mesesDePeriodo(v.periodo);
+        if (estado.desde && fin < estado.desde) return;
+        if (estado.hasta && ini > estado.hasta) return;
+        const k = nivel === "municipio" ? v.cve_ent + v.cve_mun : v.cve_ent;
+        if (!datos[k] || fin > mesesDePeriodo(datos[k].periodo)[1]) datos[k] = { valor: v.valor, periodo: v.periodo, ejemplo: !!v.ejemplo };
       });
     }
     return datos;
+  }
+
+  // Period covered by a value, as [first month, last month]: "2025" -> whole year, "2025-06-30" -> that month
+  function mesesDePeriodo(p) {
+    const s = String(p);
+    return s.length === 4 ? [s + "-01", s + "-12"] : [s.slice(0, 7), s.slice(0, 7)];
+  }
+
+  function textoPeriodo() {
+    if (!estado.desde && !estado.hasta) return "Todo el periodo";
+    return `${estado.desde || "inicio"} a ${estado.hasta || "hoy"}`;
   }
 
   function dibujarTematico() {
@@ -255,7 +281,7 @@
     const rampa = crearRampa(CONFIG.colorClaro, color, CONFIG.clases);
 
     document.getElementById("tematico-titulo").textContent = def.nombre;
-    document.getElementById("tematico-nota").textContent = def.nota || "";
+    document.getElementById("tematico-nota").textContent = `Periodo: ${textoPeriodo()}. ${def.nota || ""}`;
 
     if (estado.forma === "coropleta") {
       capaPoligonos.setStyle(f => {
