@@ -2,6 +2,8 @@
 const CONFIG = {
   // Free key from https://carto.com/basemaps/apikey; leave empty to use OpenStreetMap tiles
   cartoKey: "",
+  // Used in the citation of exported images; empty url means the page's own address
+  sitio: { nombre: "Observatorio de Derechos Humanos", autor: "", url: "" },
   rutas: {
     eventos: "datos/eventos.json",
     indicadores: "datos/indicadores.json",

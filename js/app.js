@@ -8,7 +8,8 @@
     indicador: "_eventos",    // "_eventos" counts visible events per polygon
     temasActivos: new Set(Object.keys(CONFIG.temas)),
     verifActivas: new Set(CONFIG.verificacion),
-    texto: "", desde: null, hasta: null   // "YYYY-MM" or null
+    texto: "", desde: null, hasta: null,  // "YYYY-MM" or null
+    leyendaExport: []                     // legend items of the current thematic drawing
   };
 
   const mapa = L.map("mapa", { zoomControl: false });
@@ -17,11 +18,11 @@
   if (CONFIG.cartoKey) {
     L.tileLayer(`https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=${CONFIG.cartoKey}`, {
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-      subdomains: "abcd", maxZoom: 18
+      subdomains: "abcd", maxZoom: 18, crossOrigin: true
     }).addTo(mapa);
   } else {
     L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>', maxZoom: 18
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>', maxZoom: 18, crossOrigin: true
     }).addTo(mapa);
   }
 
@@ -70,6 +71,64 @@
       desde.value = ""; hasta.value = ""; estado.desde = estado.hasta = null; dibujar();
     });
     habilitarTematico(false);
+    document.getElementById("exportar").addEventListener("click", exportarPNG);
+  }
+
+  async function exportarPNG() {
+    const btn = document.getElementById("exportar");
+    btn.disabled = true; btn.textContent = "Generando...";
+    try {
+      const blob = await Exportar.png(mapa, [capaPoligonos, capaCirculos, capaEventos], infoExportacion());
+      Exportar.descargar(blob, `observatorio_${estado.mapaId}_${estado.vista === "eventos" ? "eventos" : estado.indicador}_${new Date().toISOString().slice(0, 10)}.png`);
+    } catch (e) {
+      alert("No se pudo exportar la imagen. Si el mapa base no permite copiar sus mosaicos, prueba con otro proveedor de mapa base.\n" + e.message);
+    } finally {
+      btn.disabled = false; btn.textContent = "Exportar PNG";
+    }
+  }
+
+  // Title, subtitle, legend and credits for the exported image
+  function infoExportacion() {
+    const m = CONFIG.mapas[estado.mapaId];
+    const tematico = estado.vista === "tematico";
+    const def = !tematico ? null : estado.indicador === "_eventos"
+      ? { nombre: "Eventos registrados", fuente: null }
+      : estado.indicadores.definiciones.find(d => d.id === estado.indicador);
+    const titulo = tematico ? def.nombre : "Eventos registrados";
+    const nivel = m.nivel === "municipio" ? "por municipio" : "por entidad";
+    const subtitulo = `${m.nombre}, ${tematico ? nivel : "eventos georreferenciados"}. Periodo ${textoPeriodo()}.`;
+    let leyenda, leyendaTitulo;
+    if (tematico && !document.getElementById("eventos-encima").checked) {
+      leyenda = estado.leyendaExport; leyendaTitulo = def.unidad || "";
+    } else {
+      leyendaTitulo = tematico ? `${def.unidad || ""} y eventos` : "Temas";
+      leyenda = [...(tematico ? estado.leyendaExport : [])];
+      Object.entries(CONFIG.temas).filter(([id]) => estado.temasActivos.has(id))
+        .forEach(([, t]) => leyenda.push({ forma: "circulo", color: t.color, texto: t.nombre }));
+      if (estado.eventos.some(e => e.ejemplo && eventoVisible(e)))
+        leyenda.push({ forma: "circulo", color: "#ffffff", borde: "#5b6673", punteado: true, texto: "Registro de ejemplo" });
+    }
+    // Every source behind what is drawn: indicator source plus the sources of visible events
+    const fuentesIds = new Set();
+    if (def && def.fuente) fuentesIds.add(def.fuente);
+    const hayEventos = !tematico || document.getElementById("eventos-encima").checked || estado.indicador === "_eventos";
+    if (hayEventos) estado.eventos.filter(eventoVisible).forEach(e => fuentesIds.add(e.fuente));
+    const fuentesTxt = [...fuentesIds].map(id => {
+      const f = estado.fuentes.find(x => x.id === id);
+      return f ? f.nombre + (f.url ? ` (${f.url})` : "") : id;
+    });
+    const hoy = new Date();
+    const fechaLarga = hoy.toLocaleDateString("es-MX", { year: "numeric", month: "long", day: "numeric" });
+    const urlSitio = CONFIG.sitio.url || (location.origin + location.pathname);
+    const autor = CONFIG.sitio.autor ? `${CONFIG.sitio.autor}, ${CONFIG.sitio.nombre}` : CONFIG.sitio.nombre;
+    const pie = [
+      fuentesTxt.length ? "Fuentes: " + fuentesTxt.join("; ") + "." : "Fuentes: sin registros en la vista actual.",
+      `Límites: Marco Geoestadístico INEGI 2022. Mapa base: © OpenStreetMap contributors${CONFIG.cartoKey ? ", © CARTO" : ""}. Los datos marcados como ejemplo no describen hechos reales.`,
+      "",
+      `Cómo citar: ${autor} (${hoy.getFullYear()}). ${titulo}, ${m.nombre}. Mapa generado el ${fechaLarga} en ${urlSitio}`
+    ];
+    leyendaTitulo = leyendaTitulo.charAt(0).toUpperCase() + leyendaTitulo.slice(1);
+    return { titulo, subtitulo, leyenda, leyendaTitulo, pie };
   }
 
   function mesValido(v) { return /^\d{4}-\d{2}$/.test(v); }
@@ -187,6 +246,8 @@
     // Filters only matter when events are drawn or counted
     document.getElementById("bloque-filtros").hidden =
       estado.vista === "tematico" && !encima && estado.indicador !== "_eventos";
+    document.getElementById("periodo-info").textContent =
+      (estado.desde || estado.hasta) ? "" : `Abarca ${textoPeriodo()}`;
     if (estado.vista === "eventos") {
       capaPoligonos.setStyle(estiloNeutro);
       dibujarEventos();
@@ -223,7 +284,7 @@
       capaEventos.addLayer(m);
     });
     document.getElementById("conteo").textContent =
-      (n === 1 ? "1 evento en el mapa" : `${n} eventos en el mapa`) + ` (${textoPeriodo().toLowerCase()})`;
+      (n === 1 ? "1 evento en el mapa" : `${n} eventos en el mapa`) + `, periodo ${textoPeriodo()}`;
   }
 
   // Values of an indicator at the level of the current map
@@ -265,9 +326,24 @@
     return s.length === 4 ? [s + "-01", s + "-12"] : [s.slice(0, 7), s.slice(0, 7)];
   }
 
+  // Active range, or the years actually covered by the drawn data when no range is set
   function textoPeriodo() {
-    if (!estado.desde && !estado.hasta) return "Todo el periodo";
-    return `${estado.desde || "inicio"} a ${estado.hasta || "hoy"}`;
+    if (estado.desde || estado.hasta) return `${estado.desde || "inicio"} a ${estado.hasta || "hoy"}`;
+    const anios = aniosCubiertos();
+    if (!anios.length) return "sin datos";
+    const [a, b] = [Math.min(...anios), Math.max(...anios)];
+    return a === b ? String(a) : `${a} a ${b}`;
+  }
+
+  function aniosCubiertos() {
+    const tematico = estado.vista === "tematico";
+    const conEventos = !tematico || estado.indicador === "_eventos" || document.getElementById("eventos-encima").checked;
+    const anios = [];
+    if (conEventos) estado.eventos.filter(eventoVisible).forEach(e => anios.push(+e.fecha.slice(0, 4)));
+    if (tematico && estado.indicador !== "_eventos") {
+      valoresDe(estado.indicador, CONFIG.mapas[estado.mapaId].nivel).forEach(v => anios.push(+String(v.periodo).slice(0, 4)));
+    }
+    return anios.filter(Boolean);
   }
 
   function dibujarTematico() {
@@ -281,7 +357,7 @@
     const rampa = crearRampa(CONFIG.colorClaro, color, CONFIG.clases);
 
     document.getElementById("tematico-titulo").textContent = def.nombre;
-    document.getElementById("tematico-nota").textContent = `Periodo: ${textoPeriodo()}. ${def.nota || ""}`;
+    document.getElementById("tematico-nota").textContent = `Periodo ${textoPeriodo()}. ${def.nota || ""}`;
 
     if (estado.forma === "coropleta") {
       capaPoligonos.setStyle(f => {
@@ -290,6 +366,11 @@
         return { color: "#ffffff", weight: 1, fillColor: rampa[claseDe(d.valor, cortes)], fillOpacity: 0.85 };
       });
       dibujarLeyendaColores(cortes, rampa, def.unidad, valores.length);
+      let prev = 0;
+      estado.leyendaExport = cortes.map((c, i) => {
+        const txt = prev === c ? fmt(c) : prev === 0 ? `hasta ${fmt(c)}` : `${fmt(prev)} a ${fmt(c)}`;
+        prev = c; return { forma: "caja", color: rampa[i], texto: txt };
+      }).concat([{ forma: "caja", color: CONFIG.colorSinDato, texto: "Sin dato o cero" }]);
     } else {
       capaPoligonos.setStyle(estiloNeutro);
       const max = Math.max(...valores, 1);
@@ -305,6 +386,7 @@
       });
       document.getElementById("leyenda").innerHTML =
         `<div class="leyenda__fila"><span class="leyenda__circulo" style="--tema:${color}"></span>Área proporcional a ${def.unidad}. Máximo: ${max.toLocaleString("es-MX")}.</div>`;
+      estado.leyendaExport = [{ forma: "circulo", color, alpha: 0.35, borde: color, texto: `Área proporcional a ${def.unidad} (máximo ${fmt(max)})` }];
     }
     const fuente = def.fuente ? `Fuente: ${nombreFuente(def.fuente)}. ` : "";
     document.getElementById("tematico-metodo").textContent =
