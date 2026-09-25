@@ -348,10 +348,24 @@
     document.getElementById("eventos-encima").parentElement.hidden = estado.vista === "eventos";
     const tp = textoPeriodo();
     document.getElementById("periodo-info").textContent =
-      (estado.desde || estado.hasta || tp === "sin datos") ? "" : `Abarca ${tp}`;
+      (estado.desde || estado.hasta || tp === "sin datos") ? "" : `· ${tp}`;
     if (conIndicador) dibujarTematico(); else capaPoligonos.setStyle(estiloNeutro);
     if (conEventos) dibujarEventos();
     dibujarEtiquetas();
+    actualizarControles();
+  }
+
+  // Grey out the styling controls that do not apply to what is drawn
+  function actualizarControles() {
+    const def = estado.indicador && estado.indicador !== "_eventos"
+      ? estado.indicadores.definiciones.find(d => d.id === estado.indicador) : null;
+    const hay = estado.indicador !== "";
+    const categorico = !!(def && def.tipo === "categoria");
+    const clasesAplican = hay && !categorico && estado.forma === "coropleta";
+    document.querySelectorAll("#sel-forma button").forEach(b => b.disabled = !hay || categorico);
+    document.getElementById("gama").disabled = !hay;
+    document.getElementById("metodo").disabled = !clasesAplican;
+    document.getElementById("clases").disabled = !clasesAplican;
   }
 
   // One label per polygon, at the centroid of its bounds; hidden when "Nombres" is off
