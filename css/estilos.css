@@ -81,6 +81,12 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 }
 .segmentos button:first-child { border-left: 0; }
 .segmentos button[aria-pressed="true"] { background: var(--tinta); color: #fff; }
+.segmentos button:disabled { cursor: default; opacity: .45; }
+.segmentos button:disabled[aria-pressed="true"] { background: var(--tinta-suave); }
+.barra select:disabled { opacity: .45; }
+.barra input[type="month"] { font: inherit; color: var(--tinta); border: 1px solid var(--borde); border-radius: 6px; padding: 4px 6px; width: 9.5em; }
+.barra__boton { font: inherit; background: var(--superficie); color: var(--tinta-suave); border: 1px solid var(--borde); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+.barra__boton:hover { color: var(--tinta); }
 
 .temas { display: flex; flex-wrap: wrap; gap: 8px; }
 
