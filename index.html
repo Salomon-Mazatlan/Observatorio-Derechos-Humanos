@@ -16,47 +16,52 @@
 <a class="salto" href="#mapa">Ir al mapa</a>
 
 <header class="barra">
-  <h1 class="barra__titulo">Observatorio de Derechos Humanos</h1>
-
-  <div class="barra__grupo" role="group" aria-label="Mapa">
-    <span class="barra__etiqueta">Mapa</span>
-    <div class="segmentos" id="sel-mapa"></div>
-  </div>
-
-  <div class="barra__grupo" role="group" aria-label="Qué ver">
-    <span class="barra__etiqueta">Ver</span>
-    <div class="segmentos" id="sel-vista">
-      <button type="button" data-vista="eventos" aria-pressed="true">Eventos</button>
-      <button type="button" data-vista="tematico" aria-pressed="false">Mapa temático</button>
+  <div class="barra__fila barra__fila--principal">
+    <h1 class="barra__titulo">Observatorio de Derechos Humanos</h1>
+    <div class="barra__derecha">
+      <div class="grupo" role="group" aria-label="Mapa">
+        <span class="grupo__etiqueta">Mapa</span>
+        <div class="segmentos" id="sel-mapa"></div>
+      </div>
+      <div class="grupo" role="group" aria-label="Vista">
+        <span class="grupo__etiqueta">Vista</span>
+        <div class="segmentos" id="sel-vista">
+          <button type="button" data-vista="eventos" aria-pressed="true">Eventos</button>
+          <button type="button" data-vista="tematico" aria-pressed="false">Mapa temático</button>
+        </div>
+      </div>
+      <button type="button" class="boton boton--principal" id="exportar">Exportar PNG</button>
     </div>
   </div>
 
-  <div class="barra__grupo" id="grupo-indicador">
-    <label class="barra__etiqueta" for="indicador">Indicador</label>
-    <select id="indicador"></select>
-    <div class="segmentos" id="sel-forma">
-      <button type="button" data-forma="coropleta" aria-pressed="true">Colores</button>
-      <button type="button" data-forma="circulos" aria-pressed="false">Círculos</button>
+  <div class="barra__fila barra__fila--herramientas">
+    <div class="grupo grupo--indicador">
+      <label class="grupo__etiqueta" for="indicador">Indicador</label>
+      <select class="control" id="indicador"></select>
+      <div class="segmentos" id="sel-forma">
+        <button type="button" data-forma="coropleta" aria-pressed="true">Colores</button>
+        <button type="button" data-forma="circulos" aria-pressed="false">Círculos</button>
+      </div>
     </div>
-    <label class="barra__etiqueta" for="gama">Gama</label>
-    <select id="gama"></select>
-    <label class="barra__etiqueta" for="metodo">Cálculo</label>
-    <select id="metodo"></select>
-    <label class="barra__etiqueta" for="clases">Clases</label>
-    <select id="clases"></select>
-  </div>
 
-  <div class="barra__grupo" role="group" aria-label="Periodo">
-    <span class="barra__etiqueta">Periodo</span>
-    <input type="month" id="desde" aria-label="Desde" placeholder="AAAA-MM">
-    <span class="barra__etiqueta">a</span>
-    <input type="month" id="hasta" aria-label="Hasta" placeholder="AAAA-MM">
-    <button type="button" class="barra__boton" id="periodo-todo">Todo</button>
-    <span class="barra__etiqueta" id="periodo-info" aria-live="polite"></span>
-  </div>
+    <div class="grupo" id="grupo-estilo">
+      <label class="grupo__etiqueta" for="gama">Gama</label>
+      <select class="control control--corto" id="gama"></select>
+      <label class="grupo__etiqueta" for="metodo">Clases</label>
+      <select class="control control--medio" id="metodo" aria-label="Método de cálculo de clases"></select>
+      <select class="control control--mini" id="clases" aria-label="Número de clases"></select>
+      <label class="grupo__casilla grupo__casilla--sep"><input type="checkbox" id="nombres" checked> Nombres</label>
+    </div>
 
-  <label class="barra__etiqueta barra__casilla"><input type="checkbox" id="nombres" checked> Nombres</label>
-  <button type="button" class="barra__boton barra__boton--principal" id="exportar">Exportar PNG</button>
+    <div class="grupo" role="group" aria-label="Periodo">
+      <span class="grupo__etiqueta">Periodo</span>
+      <input class="control control--mes" type="month" id="desde" aria-label="Desde" placeholder="AAAA-MM">
+      <span class="grupo__separador">a</span>
+      <input class="control control--mes" type="month" id="hasta" aria-label="Hasta" placeholder="AAAA-MM">
+      <button type="button" class="boton boton--todo" id="periodo-todo">Todo <small id="periodo-info" aria-live="polite"></small></button>
+    </div>
+
+  </div>
 </header>
 
 <aside class="panel" id="panel">
