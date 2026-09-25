@@ -7,6 +7,8 @@
     forma: "coropleta",       // "coropleta" | "circulos"
     indicador: "",            // "" none, "_eventos" counts visible events per polygon, or an indicator id
     gama: "tema",
+    metodo: "cuantiles",
+    clases: CONFIG.clases,
     tema: "todos",            // one theme at a time, or "todos"
     verifActivas: new Set(CONFIG.verificacion),
     texto: "", desde: null, hasta: null,  // "YYYY-MM" or null
@@ -100,6 +102,17 @@
       const o = document.createElement("option"); o.value = id; o.textContent = g.nombre; gama.appendChild(o);
     });
     gama.addEventListener("change", () => { estado.gama = gama.value; dibujar(); });
+    const metodo = document.getElementById("metodo");
+    Object.entries(CONFIG.metodos).forEach(([id, m]) => {
+      const o = document.createElement("option"); o.value = id; o.textContent = m.nombre; metodo.appendChild(o);
+    });
+    metodo.addEventListener("change", () => { estado.metodo = metodo.value; dibujar(); });
+    const clases = document.getElementById("clases");
+    CONFIG.clasesOpciones.forEach(n => {
+      const o = document.createElement("option"); o.value = n; o.textContent = n; clases.appendChild(o);
+    });
+    clases.value = String(estado.clases);
+    clases.addEventListener("change", () => { estado.clases = +clases.value; dibujar(); });
     document.getElementById("ventana-cerrar").addEventListener("click", cerrarVentana);
     document.addEventListener("keydown", e => { if (e.key === "Escape") cerrarVentana(); });
     document.querySelectorAll("button.enlace[data-doc]").forEach(b =>
@@ -240,7 +253,7 @@
       b.type = "button"; b.className = "tema"; b.dataset.tema = id;
       b.style.setProperty("--tema", t.color);
       b.innerHTML = `<span class="tema__punto"></span>${t.nombre}`;
-      b.addEventListener("click", () => { estado.tema = (estado.tema === id && id !== "todos") ? "todos" : id; pintarTemas(); dibujar(); });
+      b.addEventListener("click", () => { estado.tema = (estado.tema === id && id !== "todos") ? "todos" : id; pintarTemas(); construirIndicadores(); dibujar(); });
       cont.appendChild(b);
     });
     pintarTemas();
@@ -281,6 +294,7 @@
     sel.appendChild(o0);
     estado.indicadores.definiciones.forEach(d => {
       if (!valoresDe(d.id, nivel).length) return;
+      if (!temaActivo(d.tema)) return;
       const o = document.createElement("option");
       o.value = d.id; o.textContent = `${d.nombre} (${CONFIG.temas[d.tema].nombre})`;
       sel.appendChild(o);
@@ -425,8 +439,8 @@
     document.getElementById("tematico-titulo").textContent = def.nombre;
     if (def.tipo === "categoria") { dibujarCategorico(def, datos); return; }
     const valores = Object.values(datos).map(d => d.valor).filter(v => v > 0);
-    const cortes = cortesCuantiles(valores, CONFIG.clases);
-    const rampa = crearRampa(color, CONFIG.clases);
+    const cortes = calcularCortes(valores, estado.clases, estado.metodo);
+    const rampa = crearRampa(color, Math.max(cortes.length, 1));
 
     document.getElementById("tematico-titulo").textContent = def.nombre;
     document.getElementById("tematico-nota").textContent = `Periodo ${textoPeriodo()}. ${def.nota || ""}`;
@@ -463,7 +477,7 @@
     const fuente = def.fuente ? `Fuente: ${nombreFuente(def.fuente)}. ` : "";
     document.getElementById("tematico-metodo").textContent =
       fuente + (estado.forma === "coropleta"
-        ? `Clases por cuantiles (${CONFIG.clases}), cada clase agrupa aproximadamente la misma cantidad de unidades. Sin dato o cero en gris.`
+        ? `${CONFIG.metodos[estado.metodo].nombre} (${cortes.length} clases); ${CONFIG.metodos[estado.metodo].descripcion}. Sin dato o cero en gris.`
         : "Los círculos con borde punteado muestran datos de ejemplo.");
   }
 
@@ -507,7 +521,64 @@
   }
   function claseDe(valor, cortes) {
     const i = cortes.findIndex(c => valor <= c);
-    return Math.min(i < 0 ? cortes.length - 1 : i, CONFIG.clases - 1);
+    return Math.min(i < 0 ? cortes.length - 1 : i, cortes.length - 1);
+  }
+
+  // Upper bounds of each class for the chosen method; duplicates removed
+  function calcularCortes(valores, k, metodo) {
+    const v = [...valores].sort((a, b) => a - b);
+    if (!v.length) return [];
+    const unicos = [...new Set(v)];
+    if (unicos.length <= k) return unicos;
+    let cortes;
+    const min = v[0], max = v[v.length - 1];
+    if (metodo === "iguales") {
+      cortes = Array.from({ length: k }, (_, i) => min + (max - min) * (i + 1) / k);
+    } else if (metodo === "logaritmico") {
+      const lo = Math.log(Math.max(min, 1)), hi = Math.log(max);
+      cortes = Array.from({ length: k }, (_, i) => Math.exp(lo + (hi - lo) * (i + 1) / k));
+    } else if (metodo === "naturales") {
+      cortes = jenks(v, k);
+    } else {
+      cortes = cortesCuantiles(v, k);
+    }
+    cortes = cortes.map(c => redondear(c, max));
+    cortes[cortes.length - 1] = max;
+    return [...new Set(cortes)].filter(c => c >= min);
+  }
+
+  // Round class limits to a readable precision relative to the data range
+  function redondear(x, max) {
+    if (max < 10) return Math.round(x * 100) / 100;
+    if (max < 100) return Math.round(x * 10) / 10;
+    return Math.round(x);
+  }
+
+  // Jenks natural breaks (Fisher-Jenks dynamic programming); returns k upper bounds
+  function jenks(v, k) {
+    const n = v.length;
+    const lower = Array.from({ length: n + 1 }, () => new Array(k + 1).fill(0));
+    const variance = Array.from({ length: n + 1 }, () => new Array(k + 1).fill(Infinity));
+    for (let j = 1; j <= k; j++) { lower[1][j] = 1; variance[1][j] = 0; }
+    for (let l = 2; l <= n; l++) {
+      let sum = 0, sumSq = 0, w = 0;
+      for (let m = 1; m <= l; m++) {
+        const i3 = l - m + 1, val = v[i3 - 1];
+        w++; sum += val; sumSq += val * val;
+        const varTmp = sumSq - (sum * sum) / w;
+        const i4 = i3 - 1;
+        if (i4 !== 0) {
+          for (let j = 2; j <= k; j++) {
+            if (variance[l][j] >= varTmp + variance[i4][j - 1]) { lower[l][j] = i3; variance[l][j] = varTmp + variance[i4][j - 1]; }
+          }
+        }
+      }
+      lower[l][1] = 1; variance[l][1] = sumSq - (sum * sum) / w;
+    }
+    const cortes = new Array(k); let idx = n;
+    cortes[k - 1] = v[n - 1];
+    for (let j = k; j >= 2; j--) { idx = lower[idx][j] - 1; cortes[j - 2] = v[idx - 1]; }
+    return cortes;
   }
 
   // k colors from the chosen palette; "tema" interpolates light grey to the theme color
