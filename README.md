@@ -16,8 +16,26 @@ datos/fuentes.json         catálogo de fuentes
 datos/geo/estados.geojson  32 entidades (Marco Geoestadístico INEGI 2022, simplificado)
 datos/geo/sinaloa_municipios.geojson  18 municipios de Sinaloa (INEGI 2022, sin Eldorado ni Juan José Ríos)
 herramientas/actualizar_eventos.py  carga de eventos desde captura_eventos.xlsx
+herramientas/crear_plantilla.py     regenera captura_eventos.xlsx con los eventos y fuentes actuales
+captura_eventos.xlsx       plantilla de captura (contiene los eventos publicados)
 docs/indicadores.md        ficha metodológica de indicadores
 ```
+
+## Publicar en GitHub Pages
+
+1. Crear un repositorio (por ejemplo `observatorio-ddhh`) y subir estos archivos a la rama `main`.
+2. En Settings > Pages, elegir "Deploy from a branch", rama `main`, carpeta `/ (root)`.
+3. El sitio queda en `https://<usuario>.github.io/observatorio-ddhh/`.
+
+## Probar en local
+
+El navegador bloquea `fetch` de archivos locales, así que hay que servir la carpeta:
+
+```
+python -m http.server 8000
+```
+
+y abrir `http://localhost:8000`.
 
 ## Cómo agregar un evento
 
@@ -43,6 +61,12 @@ Añadir un objeto a `datos/eventos.json`:
 Valores válidos de `tema`: `migracion`, `desplazamiento`, `desaparicion`, `periodistas`.
 Valores válidos de `verificacion`: `oficial`, `organización`, `campo`, `prensa`, `sin verificar`.
 `fuente` debe coincidir con un `id` de `datos/fuentes.json`.
+
+## Estado de los datos
+
+`datos/eventos.json` contiene registros reales de desplazamiento forzado tomados de prensa e informes (2021 a 2026, Sinaloa, Chiapas, Guerrero, Michoacán, Chihuahua, Durango y Zacatecas), con nivel de verificación según quién dio la cifra. Las coordenadas de la mayoría son la cabecera municipal, así indicado en la descripción. También contiene 29 registros reales sobre periodistas y personas defensoras (2024 a 2026): asesinatos y desapariciones documentados por ARTICLE 19, RSF, CPJ y CEMDA, casos de acoso judicial y agresiones por autoridades, cifras del Instituto de Protección de Sinaloa y de la Asociación 7 de Junio, e informes nacionales. Criterio de nombres: se nombra a las personas asesinadas o desaparecidas tal como lo hacen las organizaciones que documentan los casos; las personas agredidas que siguen en activo no se nombran. Los eventos de migración y desaparición siguen siendo ejemplos.
+
+`datos/indicadores.json` incluye dos indicadores reales de desplazamiento: personas desplazadas en 2025 por entidad (PDH Ibero, calculado a partir de porcentajes) y porcentaje de población desplazada 2020-2025 (Encuesta Intercensal 2025, solo entidades con cifra publicada). En el tema de periodistas y personas defensoras hay tres indicadores reales: personas beneficiarias del Mecanismo federal por entidad (corte mayo de 2026, 22 entidades), agresiones a la prensa 2025 (ARTICLE 19, solo cinco entidades con cifra publicada) y periodistas asesinados por entidad en 2025 y 2026 (dos periodos, útil para probar el selector). El resto son ejemplos.
 
 ## Cómo agregar un valor de indicador
 
