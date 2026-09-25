@@ -2,9 +2,9 @@
 """Update datos/eventos.json from the Excel capture template.
 
 Usage (run from the repository root):
-    python actualizar_eventos.py captura_eventos.xlsx
-    python actualizar_eventos.py captura_eventos.xlsx --reemplazar
-    python actualizar_eventos.py captura_eventos.xlsx --solo-validar
+    python herramientas/actualizar_eventos.py plantillas/eventos.xlsx
+    python herramientas/actualizar_eventos.py plantillas/eventos.xlsx --reemplazar
+    python herramientas/actualizar_eventos.py plantillas/eventos.xlsx --solo-validar
 
 Default mode merges by id: existing ids are updated, new ids are added,
 ids missing from the Excel file are kept. --reemplazar rewrites the whole
