@@ -34,6 +34,17 @@ const CONFIG = {
     campo: "Trabajo de campo",
     prensa: "Prensa"
   },
+  // Color ramps for thematic maps; "tema" uses the active theme color, others are light-to-dark stops
+  gamas: {
+    tema:    { nombre: "Color del tema", paradas: null },
+    rojos:   { nombre: "Rojos",   paradas: ["#fff5f0", "#fcbba1", "#fb6a4a", "#cb181d", "#67000d"] },
+    azules:  { nombre: "Azules",  paradas: ["#f7fbff", "#c6dbef", "#6baed6", "#2171b5", "#08306b"] },
+    verdes:  { nombre: "Verdes",  paradas: ["#f7fcf5", "#c7e9c0", "#74c476", "#238b45", "#00441b"] },
+    morados: { nombre: "Morados", paradas: ["#fcfbfd", "#dadaeb", "#9e9ac8", "#6a51a3", "#3f007d"] },
+    calidos: { nombre: "Amarillo a rojo", paradas: ["#ffffcc", "#fed976", "#fd8d3c", "#e31a1c", "#800026"] },
+    viridis: { nombre: "Viridis", paradas: ["#fde725", "#5ec962", "#21918c", "#3b528b", "#440154"] },
+    grises:  { nombre: "Grises",  paradas: ["#f7f7f7", "#cccccc", "#969696", "#525252", "#000000"] }
+  },
   // Choropleth: number of classes and the light end of each theme ramp
   clases: 5,
   colorClaro: "#f4f4f1",

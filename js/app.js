@@ -5,8 +5,9 @@
     mapaId: "mexico",
     vista: "eventos",         // "eventos" | "tematico"
     forma: "coropleta",       // "coropleta" | "circulos"
-    indicador: "_eventos",    // "_eventos" counts visible events per polygon
-    temasActivos: new Set(Object.keys(CONFIG.temas)),
+    indicador: "",            // "" none, "_eventos" counts visible events per polygon, or an indicator id
+    gama: "tema",
+    tema: "todos",            // one theme at a time, or "todos"
     verifActivas: new Set(CONFIG.verificacion),
     texto: "", desde: null, hasta: null,  // "YYYY-MM" or null
     leyendaExport: []                     // legend items of the current thematic drawing
@@ -94,6 +95,15 @@
     document.querySelectorAll("#sel-forma button").forEach(b =>
       b.addEventListener("click", () => { estado.forma = b.dataset.forma; marcar("#sel-forma", "forma", estado.forma); dibujar(); }));
     document.getElementById("eventos-encima").addEventListener("change", dibujar);
+    const gama = document.getElementById("gama");
+    Object.entries(CONFIG.gamas).forEach(([id, g]) => {
+      const o = document.createElement("option"); o.value = id; o.textContent = g.nombre; gama.appendChild(o);
+    });
+    gama.addEventListener("change", () => { estado.gama = gama.value; dibujar(); });
+    document.getElementById("ventana-cerrar").addEventListener("click", cerrarVentana);
+    document.addEventListener("keydown", e => { if (e.key === "Escape") cerrarVentana(); });
+    document.querySelectorAll("button.enlace[data-doc]").forEach(b =>
+      b.addEventListener("click", () => mostrarDocumento(b.dataset.doc, b.dataset.titulo)));
     const desde = document.getElementById("desde"), hasta = document.getElementById("hasta");
     [desde, hasta].forEach(i => i.addEventListener("change", () => {
       estado.desde = mesValido(desde.value) ? desde.value : null;
@@ -103,7 +113,6 @@
     document.getElementById("periodo-todo").addEventListener("click", () => {
       desde.value = ""; hasta.value = ""; estado.desde = estado.hasta = null; dibujar();
     });
-    habilitarTematico(false);
     document.getElementById("exportar").addEventListener("click", exportarPNG);
   }
 
@@ -123,7 +132,7 @@
   // Title, subtitle, legend and credits for the exported image
   function infoExportacion() {
     const m = CONFIG.mapas[estado.mapaId];
-    const tematico = estado.vista === "tematico";
+    const tematico = estado.indicador !== "";
     const def = !tematico ? null : estado.indicador === "_eventos"
       ? { nombre: "Eventos registrados", fuente: null }
       : estado.indicadores.definiciones.find(d => d.id === estado.indicador);
@@ -131,12 +140,12 @@
     const nivel = m.nivel === "municipio" ? "por municipio" : "por entidad";
     const subtitulo = `${m.nombre}, ${tematico ? nivel : "eventos georreferenciados"}. Periodo ${textoPeriodo()}.`;
     let leyenda, leyendaTitulo;
-    if (tematico && !document.getElementById("eventos-encima").checked) {
+    if (tematico && !hayEventosDibujados()) {
       leyenda = estado.leyendaExport; leyendaTitulo = def.unidad || "";
     } else {
       leyendaTitulo = tematico ? `${def.unidad || ""} y eventos` : "Temas";
       leyenda = [...(tematico ? estado.leyendaExport : [])];
-      Object.entries(CONFIG.temas).filter(([id]) => estado.temasActivos.has(id))
+      Object.entries(CONFIG.temas).filter(([id]) => temaActivo(id))
         .forEach(([, t]) => leyenda.push({ forma: "circulo", color: t.color, texto: t.nombre }));
       if (estado.eventos.some(e => e.ejemplo && eventoVisible(e)))
         leyenda.push({ forma: "circulo", color: "#ffffff", borde: "#5b6673", punteado: true, texto: "Registro de ejemplo" });
@@ -144,7 +153,7 @@
     // Every source behind what is drawn: indicator source plus the sources of visible events
     const fuentesIds = new Set();
     if (def && def.fuente) fuentesIds.add(def.fuente);
-    const hayEventos = !tematico || document.getElementById("eventos-encima").checked || estado.indicador === "_eventos";
+    const hayEventos = hayEventosDibujados() || estado.indicador === "_eventos";
     if (hayEventos) estado.eventos.filter(eventoVisible).forEach(e => fuentesIds.add(e.fuente));
     const fuentesTxt = [...fuentesIds].map(id => {
       const f = estado.fuentes.find(x => x.id === id);
@@ -166,10 +175,34 @@
 
   function mesValido(v) { return /^\d{4}-\d{2}$/.test(v); }
 
-  // Thematic controls stay visible but disabled while viewing events
-  function habilitarTematico(on) {
-    document.getElementById("indicador").disabled = !on;
-    document.querySelectorAll("#sel-forma button").forEach(b => b.disabled = !on);
+  // ---------- floating panel over the map ----------
+
+  function abrirVentana(titulo, html, clase) {
+    const v = document.getElementById("ventana");
+    v.className = "ventana" + (clase ? " " + clase : "");
+    document.getElementById("ventana-titulo").textContent = titulo;
+    document.getElementById("ventana-cuerpo").innerHTML = html;
+    v.hidden = false;
+    document.getElementById("ventana-cuerpo").scrollTop = 0;
+  }
+  function cerrarVentana() { document.getElementById("ventana").hidden = true; }
+
+  // Renders a Markdown file from the repository inside the panel (marked is loaded on demand)
+  async function mostrarDocumento(ruta, titulo) {
+    abrirVentana(titulo, "<p class='nota'>Cargando...</p>", "ventana--documento");
+    try {
+      if (!window.marked) await cargarScript("https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js");
+      const md = await fetch(ruta).then(r => { if (!r.ok) throw new Error(r.status); return r.text(); });
+      document.getElementById("ventana-cuerpo").innerHTML = `<div class="markdown">${marked.parse(md)}</div>`;
+      document.querySelectorAll("#ventana-cuerpo a[href^='http']").forEach(l => { l.target = "_blank"; l.rel = "noopener"; });
+    } catch (e) {
+      document.getElementById("ventana-cuerpo").innerHTML = `<p class="nota">No se pudo cargar ${ruta} (${e.message}).</p>`;
+    }
+  }
+  function cargarScript(src) {
+    return new Promise((res, rej) => {
+      const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = () => rej(new Error("script")); document.head.appendChild(s);
+    });
   }
 
   function marcar(sel, attr, valor) {
@@ -185,7 +218,7 @@
     capaPoligonos.clearLayers();
     capaPoligonos.addData(estado.geos[id]);
     mapa.fitBounds(capaPoligonos.getBounds(), { padding: [10, 10] });
-    document.getElementById("detalle").hidden = true;
+    cerrarVentana();
     construirIndicadores();
     dibujar();
   }
@@ -193,32 +226,33 @@
   function cambiarVista(v) {
     estado.vista = v;
     marcar("#sel-vista", "vista", v);
-    const tematico = v === "tematico";
-    habilitarTematico(tematico);
-    document.getElementById("bloque-tematico").hidden = !tematico;
     dibujar();
   }
 
   // ---------- sidebar builders ----------
 
+  // One theme at a time (or all); clicking the active one returns to "todos"
   function construirTemas() {
     const cont = document.getElementById("temas");
-    Object.entries(CONFIG.temas).forEach(([id, t]) => {
+    const opciones = [["todos", { nombre: "Todos", color: "#5b6673" }], ...Object.entries(CONFIG.temas)];
+    opciones.forEach(([id, t]) => {
       const b = document.createElement("button");
-      b.type = "button"; b.className = "tema tema--activo"; b.dataset.tema = id;
+      b.type = "button"; b.className = "tema"; b.dataset.tema = id;
       b.style.setProperty("--tema", t.color);
-      b.setAttribute("aria-pressed", "true");
       b.innerHTML = `<span class="tema__punto"></span>${t.nombre}`;
-      b.addEventListener("click", () => {
-        estado.temasActivos.has(id) ? estado.temasActivos.delete(id) : estado.temasActivos.add(id);
-        const on = estado.temasActivos.has(id);
-        b.classList.toggle("tema--activo", on);
-        b.setAttribute("aria-pressed", String(on));
-        dibujar();
-      });
+      b.addEventListener("click", () => { estado.tema = (estado.tema === id && id !== "todos") ? "todos" : id; pintarTemas(); dibujar(); });
       cont.appendChild(b);
     });
+    pintarTemas();
   }
+  function pintarTemas() {
+    document.querySelectorAll("#temas .tema").forEach(b => {
+      const on = b.dataset.tema === estado.tema;
+      b.classList.toggle("tema--activo", on);
+      b.setAttribute("aria-pressed", String(on));
+    });
+  }
+  function temaActivo(id) { return estado.tema === "todos" || estado.tema === id; }
 
   function construirVerificacion() {
     const cont = document.getElementById("verif");
@@ -239,6 +273,9 @@
     const sel = document.getElementById("indicador");
     const nivel = CONFIG.mapas[estado.mapaId].nivel;
     sel.innerHTML = "";
+    const oN = document.createElement("option");
+    oN.value = ""; oN.textContent = "Ninguno";
+    sel.appendChild(oN);
     const o0 = document.createElement("option");
     o0.value = "_eventos"; o0.textContent = "Eventos registrados (conteo)";
     sel.appendChild(o0);
@@ -248,7 +285,7 @@
       o.value = d.id; o.textContent = `${d.nombre} (${CONFIG.temas[d.tema].nombre})`;
       sel.appendChild(o);
     });
-    if (![...sel.options].some(o => o.value === estado.indicador)) estado.indicador = "_eventos";
+    if (![...sel.options].some(o => o.value === estado.indicador)) estado.indicador = "";
     sel.value = estado.indicador;
     sel.onchange = () => { estado.indicador = sel.value; dibujar(); };
   }
@@ -275,23 +312,24 @@
   function dibujar() {
     capaEventos.clearLayers();
     capaCirculos.clearLayers();
-    const encima = document.getElementById("eventos-encima").checked;
+    const conIndicador = estado.indicador !== "";
+    const conEventos = hayEventosDibujados();
     // Filters only matter when events are drawn or counted
-    document.getElementById("bloque-filtros").hidden =
-      estado.vista === "tematico" && !encima && estado.indicador !== "_eventos";
+    document.getElementById("bloque-filtros").hidden = !conEventos && estado.indicador !== "_eventos";
+    document.getElementById("bloque-tematico").hidden = !conIndicador;
+    document.getElementById("eventos-encima").parentElement.hidden = estado.vista === "eventos";
     document.getElementById("periodo-info").textContent =
       (estado.desde || estado.hasta) ? "" : `Abarca ${textoPeriodo()}`;
-    if (estado.vista === "eventos") {
-      capaPoligonos.setStyle(estiloNeutro);
-      dibujarEventos();
-    } else {
-      dibujarTematico();
-      if (document.getElementById("eventos-encima").checked) dibujarEventos();
-    }
+    if (conIndicador) dibujarTematico(); else capaPoligonos.setStyle(estiloNeutro);
+    if (conEventos) dibujarEventos();
+  }
+
+  function hayEventosDibujados() {
+    return estado.vista === "eventos" || document.getElementById("eventos-encima").checked;
   }
 
   function eventoVisible(e) {
-    if (!estado.temasActivos.has(e.tema)) return false;
+    if (!temaActivo(e.tema)) return false;
     if (!estado.verifActivas.has(e.verificacion)) return false;
     const mes = e.fecha.slice(0, 7);
     if (estado.desde && mes < estado.desde) return false;
@@ -369,11 +407,10 @@
   }
 
   function aniosCubiertos() {
-    const tematico = estado.vista === "tematico";
-    const conEventos = !tematico || estado.indicador === "_eventos" || document.getElementById("eventos-encima").checked;
+    const conEventos = hayEventosDibujados() || estado.indicador === "_eventos";
     const anios = [];
     if (conEventos) estado.eventos.filter(eventoVisible).forEach(e => anios.push(+e.fecha.slice(0, 4)));
-    if (tematico && estado.indicador !== "_eventos") {
+    if (estado.indicador && estado.indicador !== "_eventos") {
       valoresDe(estado.indicador, CONFIG.mapas[estado.mapaId].nivel).forEach(v => anios.push(+String(v.periodo).slice(0, 4)));
     }
     return anios.filter(Boolean);
@@ -389,7 +426,7 @@
     if (def.tipo === "categoria") { dibujarCategorico(def, datos); return; }
     const valores = Object.values(datos).map(d => d.valor).filter(v => v > 0);
     const cortes = cortesCuantiles(valores, CONFIG.clases);
-    const rampa = crearRampa(CONFIG.colorClaro, color, CONFIG.clases);
+    const rampa = crearRampa(color, CONFIG.clases);
 
     document.getElementById("tematico-titulo").textContent = def.nombre;
     document.getElementById("tematico-nota").textContent = `Periodo ${textoPeriodo()}. ${def.nota || ""}`;
@@ -433,17 +470,25 @@
   // Categorical choropleth (e.g. legal framework): one color per category, no classes
   function dibujarCategorico(def, datos) {
     document.getElementById("tematico-nota").textContent = `Periodo ${textoPeriodo()}. ${def.nota || ""}`;
+    // Category colors: the indicator's own, or the chosen palette from dark (first) to light (last)
+    const claves = Object.keys(def.categorias);
+    let colores = def.colores;
+    if (estado.gama !== "tema") {
+      const rampa = crearRampa("#1f2a37", claves.length).reverse();
+      colores = Object.fromEntries(claves.map((k, i) => [k, rampa[i]]));
+    }
     capaPoligonos.setStyle(f => {
       const d = datos[claveDe(f.properties)];
       if (!d) return { ...estiloNeutro(), fillColor: CONFIG.colorSinDato, fillOpacity: 0.55 };
-      return { color: "#ffffff", weight: 1, fillColor: def.colores[d.valor] || CONFIG.colorSinDato, fillOpacity: 0.85 };
+      return { color: "#ffffff", weight: 1, fillColor: colores[d.valor] || CONFIG.colorSinDato, fillOpacity: 0.85 };
     });
     const conteo = {};
     Object.values(datos).forEach(d => { conteo[d.valor] = (conteo[d.valor] || 0) + 1; });
-    const filas = Object.entries(def.categorias).map(([k, nombre]) =>
-      `<div class="leyenda__fila"><span class="leyenda__caja" style="background:${def.colores[k]}"></span>${nombre} (${conteo[k] || 0})</div>`);
+    const filas = claves.map(k =>
+      `<div class="leyenda__fila"><span class="leyenda__caja" style="background:${colores[k]}"></span>${def.categorias[k]} (${conteo[k] || 0})</div>`);
     document.getElementById("leyenda").innerHTML = filas.join("");
-    estado.leyendaExport = Object.entries(def.categorias).map(([k, nombre]) => ({ forma: "caja", color: def.colores[k], texto: `${nombre} (${conteo[k] || 0})` }));
+    estado.leyendaExport = claves.map(k => ({ forma: "caja", color: colores[k], texto: `${def.categorias[k]} (${conteo[k] || 0})` }));
+    estado.coloresCategoria = colores;
     document.getElementById("tematico-metodo").textContent =
       `Fuente: ${nombreFuente(def.fuente)}. Mapa categórico: cada entidad se pinta según el tipo de instrumento vigente, sin clases numéricas.`;
     // Circles make no sense for categories: keep the buttons but force colors
@@ -465,11 +510,15 @@
     return Math.min(i < 0 ? cortes.length - 1 : i, CONFIG.clases - 1);
   }
 
-  function crearRampa(claro, oscuro, k) {
-    const a = hexRgb(claro), b = hexRgb(oscuro);
+  // k colors from the chosen palette; "tema" interpolates light grey to the theme color
+  function crearRampa(colorTema, k) {
+    const g = CONFIG.gamas[estado.gama];
+    const paradas = (g && g.paradas) ? g.paradas : [CONFIG.colorClaro, colorTema];
+    const rgb = paradas.map(hexRgb);
     return Array.from({ length: k }, (_, i) => {
-      const t = k === 1 ? 1 : 0.15 + 0.85 * (i / (k - 1));
-      return rgbHex(a.map((x, j) => Math.round(x + (b[j] - x) * t)));
+      const t0 = k === 1 ? 1 : (paradas.length === 2 ? 0.15 + 0.85 * (i / (k - 1)) : i / (k - 1));
+      const pos = t0 * (rgb.length - 1), j = Math.min(Math.floor(pos), rgb.length - 2), f = pos - j;
+      return rgbHex(rgb[j].map((x, c) => Math.round(x + (rgb[j + 1][c] - x) * f)));
     });
   }
   function hexRgb(h) { return [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)); }
@@ -496,7 +545,7 @@
 
   function alPoligono(feature, layer) {
     layer.on("mouseover", () => {
-      if (estado.vista !== "tematico" || estado.forma !== "coropleta") { layer.bindTooltip(feature.properties.nombre, { sticky: true, className: "tooltip-poligono" }).openTooltip(); return; }
+      if (!estado.indicador || estado.forma !== "coropleta") { layer.bindTooltip(feature.properties.nombre, { sticky: true, className: "tooltip-poligono" }).openTooltip(); return; }
       const d = datosTematicos()[claveDe(feature.properties)];
       const def = estado.indicador === "_eventos" ? { unidad: "eventos" } : estado.indicadores.definiciones.find(x => x.id === estado.indicador);
       layer.bindTooltip(d ? etiquetaValor(feature.properties.nombre, d, def.unidad) : `<strong>${feature.properties.nombre}</strong><br>sin dato`, { sticky: true }).openTooltip();
@@ -531,34 +580,28 @@
         return `<li>${nombre}<br><small>${meta}${i.nota ? ". " + i.nota : ""}</small></li>`;
       }).join("");
       htmlMarco = `<h4 class="detalle__sub">Marco legal de protección</h4>
-        <p class="detalle__meta"><span class="leyenda__caja leyenda__caja--inline" style="background:${CONFIG.marcoLegalColores[marco.categoria]}"></span>${cat}</p>
+        <p class="detalle__meta"><span class="leyenda__caja leyenda__caja--inline" style="background:${(estado.indicador === "per_marco_legal" && estado.coloresCategoria ? estado.coloresCategoria : CONFIG.marcoLegalColores)[marco.categoria]}"></span>${cat}</p>
         ${items ? `<ul class="lista lista--marco">${items}</ul>` : ""}
         ${marco.nota ? `<p class="nota">${marco.nota}</p>` : ""}`;
     }
     const nEv = estado.eventos.filter(eventoVisible).filter(e => dentro([e.lon, e.lat], feat.geometry)).length;
     const clave = nivel === "municipio" ? `Clave INEGI ${p.cve_ent}${p.cve_mun}` : `Clave INEGI ${p.cve_ent}`;
-    document.getElementById("detalle-cuerpo").innerHTML = `
-      <h3 class="detalle__titulo">${p.nombre}</h3>
+    abrirVentana(p.nombre, `
       <p class="detalle__meta">${clave} · ${nEv} eventos con los filtros actuales</p>
       ${filas ? `<ul class="lista">${filas}</ul>` : "<p class='nota'>Sin indicadores numéricos cargados para esta unidad.</p>"}
-      ${htmlMarco}`;
-    document.getElementById("detalle").hidden = false;
+      ${htmlMarco}`);
   }
 
   function mostrarDetalleEvento(e) {
     const f = estado.fuentes.find(x => x.id === e.fuente);
     const link = e.url ? `<p><a href="${e.url}" target="_blank" rel="noopener">Ver fuente original</a></p>` : "";
-    document.getElementById("detalle-cuerpo").innerHTML = `
+    abrirVentana(e.titulo, `
       <p class="detalle__tema" style="--tema:${CONFIG.temas[e.tema].color}">${CONFIG.temas[e.tema].nombre} · ${e.tipo}</p>
-      <h3 class="detalle__titulo">${e.titulo}</h3>
       <p class="detalle__meta">${formatoFecha(e.fecha)} · ${e.lugar}</p>
       <p>${e.descripcion}</p>
       <p><span class="badge badge--${clase(e.verificacion)}">${e.verificacion}</span>
          ${e.ejemplo ? '<span class="badge badge--ejemplo">ejemplo</span>' : ""}</p>
-      <p class="nota">Fuente: ${f ? f.nombre : e.fuente}</p>${link}`;
-    const sec = document.getElementById("detalle");
-    sec.hidden = false;
-    sec.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      <p class="nota">Fuente: ${f ? f.nombre : e.fuente}</p>${link}`);
   }
 
   // ---------- geometry helpers ----------
