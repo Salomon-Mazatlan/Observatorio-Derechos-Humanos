@@ -33,11 +33,13 @@
 
   <div class="barra__grupo" id="grupo-indicador">
     <label class="barra__etiqueta" for="indicador">Indicador</label>
-    <select id="indicador" disabled></select>
+    <select id="indicador"></select>
     <div class="segmentos" id="sel-forma">
-      <button type="button" data-forma="coropleta" aria-pressed="true" disabled>Colores</button>
-      <button type="button" data-forma="circulos" aria-pressed="false" disabled>Círculos</button>
+      <button type="button" data-forma="coropleta" aria-pressed="true">Colores</button>
+      <button type="button" data-forma="circulos" aria-pressed="false">Círculos</button>
     </div>
+    <label class="barra__etiqueta" for="gama">Gama</label>
+    <select id="gama"></select>
   </div>
 
   <div class="barra__grupo" role="group" aria-label="Periodo">
@@ -79,11 +81,6 @@
     <p class="nota" id="tematico-metodo"></p>
   </section>
 
-  <section class="bloque bloque--detalle" id="detalle" hidden>
-    <h2 class="bloque__titulo">Detalle</h2>
-    <div id="detalle-cuerpo"></div>
-  </section>
-
   <section class="bloque">
     <details>
       <summary class="bloque__titulo bloque__titulo--summary">Fuentes de datos</summary>
@@ -93,11 +90,20 @@
 
   <footer class="panel__pie">
     <p>Los registros marcados como <em>ejemplo</em> son plantillas y no describen hechos reales.</p>
-    <p><a href="docs/indicadores.md">Ficha de indicadores</a> · <a href="README.md">Cómo colaborar</a></p>
+    <p><button type="button" class="enlace" data-doc="docs/indicadores.md" data-titulo="Ficha de indicadores">Ficha de indicadores</button> · <button type="button" class="enlace" data-doc="README.md" data-titulo="Cómo colaborar">Cómo colaborar</button></p>
   </footer>
 </aside>
 
-<main class="mapa" id="mapa" role="region" aria-label="Mapa interactivo"></main>
+<main class="mapa-area">
+  <div class="mapa" id="mapa" role="region" aria-label="Mapa interactivo"></div>
+  <section class="ventana" id="ventana" hidden role="dialog" aria-labelledby="ventana-titulo">
+    <header class="ventana__cabecera">
+      <h2 class="ventana__titulo" id="ventana-titulo"></h2>
+      <button type="button" class="ventana__cerrar" id="ventana-cerrar" aria-label="Cerrar">×</button>
+    </header>
+    <div class="ventana__cuerpo" id="ventana-cuerpo"></div>
+  </section>
+</main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" crossorigin=""></script>
 <script src="js/config.js"></script>
