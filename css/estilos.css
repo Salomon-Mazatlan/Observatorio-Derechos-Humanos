@@ -66,7 +66,7 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
   font-weight: 500;
   font-size: 22px;
   line-height: 1.1;
-  margin: 0 auto 0 0;
+  margin: 0 8px 0 0;
 }
 .barra__grupo { display: flex; align-items: center; gap: 8px; }
 .barra__etiqueta { font-size: 12.5px; color: var(--tinta-suave); }
@@ -195,7 +195,40 @@ input[type="search"], input[type="number"], select {
 
 /* ----- map ----- */
 
+.mapa-area { position: relative; height: 100%; min-height: 0; }
 .mapa { height: 100%; min-height: 0; }
+.leaflet-interactive:focus { outline: none; }
+.leaflet-interactive:focus-visible { outline: 2px solid var(--tinta); }
+
+/* floating panel over the map */
+.ventana {
+  position: absolute; top: 14px; right: 14px; z-index: 1000;
+  width: min(380px, calc(100% - 28px)); max-height: calc(100% - 28px);
+  display: flex; flex-direction: column;
+  background: var(--superficie); border: 1px solid var(--borde); border-radius: 8px;
+  box-shadow: 0 6px 24px rgba(31, 42, 55, 0.18);
+}
+.ventana--documento { width: min(760px, calc(100% - 28px)); }
+.ventana__cabecera { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px 8px; border-bottom: 1px solid var(--borde); }
+.ventana__titulo { font-family: var(--serif); font-weight: 500; font-size: 20px; line-height: 1.2; margin: 0; flex: 1; }
+.ventana__cerrar { font: inherit; font-size: 22px; line-height: 1; background: none; border: 0; color: var(--tinta-suave); cursor: pointer; padding: 0 2px; }
+.ventana__cerrar:hover { color: var(--tinta); }
+.ventana__cuerpo { padding: 12px 14px 16px; overflow-y: auto; }
+.ventana__cuerpo p { margin: 0 0 8px; }
+.enlace { font: inherit; background: none; border: 0; padding: 0; color: var(--enlace); cursor: pointer; text-decoration: underline; }
+
+/* rendered markdown */
+.markdown { font-size: 14px; line-height: 1.55; }
+.markdown h1 { font-family: var(--serif); font-weight: 500; font-size: 24px; margin: 0 0 10px; }
+.markdown h2 { font-family: var(--serif); font-weight: 500; font-size: 19px; margin: 18px 0 6px; }
+.markdown h3 { font-size: 15px; margin: 14px 0 4px; }
+.markdown table { border-collapse: collapse; width: 100%; margin: 8px 0 12px; font-size: 13px; }
+.markdown th, .markdown td { border: 1px solid var(--borde); padding: 5px 7px; text-align: left; vertical-align: top; }
+.markdown th { background: var(--fondo); }
+.markdown code { font-size: 12.5px; background: var(--fondo); padding: 1px 4px; border-radius: 3px; }
+.markdown pre { background: var(--fondo); padding: 10px; border-radius: 6px; overflow-x: auto; font-size: 12.5px; }
+.markdown pre code { background: none; padding: 0; }
+.markdown img { max-width: 100%; height: auto; border: 1px solid var(--borde); }
 .leaflet-container { font-family: var(--sans); background: var(--fondo); }
 .leaflet-tooltip { font-size: 13px; }
 .tooltip-poligono { background: transparent; border: 0; box-shadow: none; color: var(--tinta-suave); font-family: var(--serif); font-size: 14px; }
@@ -204,10 +237,11 @@ input[type="search"], input[type="number"], select {
 
 @media (max-width: 760px) {
   body { grid-template-columns: 1fr; grid-template-rows: auto 50vh minmax(0, 1fr); }
+  .ventana { top: 8px; right: 8px; width: calc(100% - 16px); max-height: calc(100% - 16px); }
   .barra { padding: 10px 14px; gap: 8px 16px; }
   .barra__titulo { font-size: 18px; width: 100%; }
   .barra select { max-width: 200px; }
-  .mapa { order: 0; }
+  .mapa-area { order: 0; }
   .panel { border-right: 0; border-top: 1px solid var(--borde); padding: 18px 16px 28px; }
 }
 
