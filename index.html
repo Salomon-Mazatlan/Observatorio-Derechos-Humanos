@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Observatorio de Derechos Humanos</title>
+  <meta name="description" content="Mapa interactivo sobre migración, desplazamiento forzado, desaparición forzada y protección a periodistas y personas defensoras en México.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" crossorigin="">
+  <link rel="stylesheet" href="css/estilos.css">
+</head>
+<body>
+
+<a class="salto" href="#mapa">Ir al mapa</a>
+
+<aside class="panel" id="panel">
+  <header class="panel__cabecera">
+    <h1 class="panel__titulo">Observatorio de Derechos Humanos</h1>
+    <p class="panel__bajada">Registro georreferenciado de migración, desplazamiento, desaparición y protección a periodistas y personas defensoras.</p>
+  </header>
+
+  <nav class="temas" id="temas" aria-label="Temas"></nav>
+
+  <section class="bloque">
+    <h2 class="bloque__titulo">Filtrar eventos</h2>
+    <label class="campo">
+      <span>Buscar por lugar o título</span>
+      <input type="search" id="buscar" placeholder="Ej. Culiacán, albergue, fosa">
+    </label>
+    <div class="campo campo--doble">
+      <label><span>Desde</span><input type="number" id="anio-min" min="2000" max="2100" step="1"></label>
+      <label><span>Hasta</span><input type="number" id="anio-max" min="2000" max="2100" step="1"></label>
+    </div>
+    <fieldset class="campo">
+      <legend>Nivel de verificación</legend>
+      <div class="verif" id="verif"></div>
+    </fieldset>
+    <p class="conteo" id="conteo" aria-live="polite"></p>
+  </section>
+
+  <section class="bloque">
+    <h2 class="bloque__titulo">Indicador por entidad</h2>
+    <label class="campo">
+      <span>Indicador</span>
+      <select id="indicador"><option value="">Ninguno</option></select>
+    </label>
+    <p class="nota" id="indicador-nota"></p>
+    <div class="leyenda" id="leyenda" hidden></div>
+  </section>
+
+  <section class="bloque bloque--detalle" id="detalle" hidden>
+    <h2 class="bloque__titulo">Detalle</h2>
+    <div id="detalle-cuerpo"></div>
+  </section>
+
+  <section class="bloque">
+    <details>
+      <summary class="bloque__titulo bloque__titulo--summary">Fuentes de datos</summary>
+      <ul class="fuentes" id="fuentes"></ul>
+    </details>
+  </section>
+
+  <footer class="panel__pie">
+    <p>Los registros marcados como <em>ejemplo</em> son plantillas y no describen hechos reales.</p>
+    <p><a href="docs/indicadores.md">Ficha de indicadores</a> · <a href="README.md">Cómo colaborar</a></p>
+  </footer>
+</aside>
+
+<main class="mapa" id="mapa" role="region" aria-label="Mapa interactivo"></main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" crossorigin=""></script>
+<script src="js/config.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
