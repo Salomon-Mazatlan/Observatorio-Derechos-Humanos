@@ -5,7 +5,8 @@
   "nombre": "Personas desaparecidas y no localizadas (acumulado)",
   "unidad": "personas",
   "fuente": "rnpdno",
-  "nota": "Consultar con fecha de corte; el registro cambia a diario"
+  "nota": "Consultar con fecha de corte; el registro cambia a diario",
+  "acumulado": true
  },
  "valores": [
   {
