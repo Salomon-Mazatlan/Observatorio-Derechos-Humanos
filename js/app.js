@@ -1,6 +1,6 @@
 (async function () {
   const estado = {
-    eventos: [], indicadores: { definiciones: [], valores: [], poblacion: [] }, fuentes: [],
+    eventos: [], indicadores: { definiciones: [], valores: [], poblacion: [] }, fuentes: [], marcoLegal: null,
     geos: {},                 // loaded polygon files by map id
     mapaId: "mexico",
     vista: "eventos",         // "eventos" | "tematico"
@@ -30,12 +30,14 @@
   const capaCirculos = L.layerGroup().addTo(mapa);
   const capaEventos = L.layerGroup().addTo(mapa);
 
-  const [eventos, indicadores, fuentes] = await Promise.all(
+  const [eventos, indice, fuentes, marcoLegal] = await Promise.all(
     Object.values(CONFIG.rutas).map(r => fetch(r).then(x => x.json()))
   );
   estado.eventos = eventos;
-  estado.indicadores = indicadores;
+  estado.indicadores = await cargarIndicadores(indice);
   estado.fuentes = fuentes;
+  estado.marcoLegal = marcoLegal;
+  incorporarMarcoLegal();
 
   construirBarra();
   construirTemas();
@@ -44,6 +46,37 @@
   construirFuentes();
   iniciarFiltros();
   await cambiarMapa("mexico");
+
+  // Each indicator lives in its own file listed in indice.json; merge them into one structure
+  async function cargarIndicadores(indice) {
+    const base = CONFIG.rutas.indicadores.replace(/[^/]+$/, "");
+    const docs = await Promise.all(indice.archivos.map(f => fetch(base + f).then(x => x.json())));
+    const definiciones = [], valores = [];
+    docs.forEach(d => {
+      definiciones.push(d.definicion);
+      (d.valores || []).forEach(v => valores.push({ indicador: d.definicion.id, ...v }));
+    });
+    return { definiciones, valores, poblacion: [] };
+  }
+
+  // Adds the legal framework as a categorical indicator at state level
+  function incorporarMarcoLegal() {
+    const ml = estado.marcoLegal;
+    if (!ml) return;
+    estado.indicadores.definiciones.push({
+      id: "per_marco_legal", tema: "periodistas", tipo: "categoria",
+      nombre: "Marco legal estatal de protección", unidad: "categoría", fuente: ml.fuente_principal.id,
+      categorias: ml.categorias, colores: CONFIG.marcoLegalColores,
+      nota: `Clasificación de ISHR con corte ${ml.fecha_corte}, más actualizaciones puntuales. Clic en una entidad para ver sus instrumentos.`
+    });
+    ml.entidades.forEach(e => estado.indicadores.valores.push({
+      indicador: "per_marco_legal", cve_ent: e.cve_ent, periodo: e.fecha_corte, valor: e.categoria, ejemplo: false
+    }));
+  }
+
+  function marcoDe(cve_ent) {
+    return estado.marcoLegal ? estado.marcoLegal.entidades.find(e => e.cve_ent === cve_ent) : null;
+  }
 
   // ---------- top bar ----------
 
@@ -352,6 +385,8 @@
       : estado.indicadores.definiciones.find(d => d.id === estado.indicador);
     const color = def.tema ? CONFIG.temas[def.tema].color : "#1f2a37";
     const datos = datosTematicos();
+    document.getElementById("tematico-titulo").textContent = def.nombre;
+    if (def.tipo === "categoria") { dibujarCategorico(def, datos); return; }
     const valores = Object.values(datos).map(d => d.valor).filter(v => v > 0);
     const cortes = cortesCuantiles(valores, CONFIG.clases);
     const rampa = crearRampa(CONFIG.colorClaro, color, CONFIG.clases);
@@ -393,6 +428,26 @@
       fuente + (estado.forma === "coropleta"
         ? `Clases por cuantiles (${CONFIG.clases}), cada clase agrupa aproximadamente la misma cantidad de unidades. Sin dato o cero en gris.`
         : "Los círculos con borde punteado muestran datos de ejemplo.");
+  }
+
+  // Categorical choropleth (e.g. legal framework): one color per category, no classes
+  function dibujarCategorico(def, datos) {
+    document.getElementById("tematico-nota").textContent = `Periodo ${textoPeriodo()}. ${def.nota || ""}`;
+    capaPoligonos.setStyle(f => {
+      const d = datos[claveDe(f.properties)];
+      if (!d) return { ...estiloNeutro(), fillColor: CONFIG.colorSinDato, fillOpacity: 0.55 };
+      return { color: "#ffffff", weight: 1, fillColor: def.colores[d.valor] || CONFIG.colorSinDato, fillOpacity: 0.85 };
+    });
+    const conteo = {};
+    Object.values(datos).forEach(d => { conteo[d.valor] = (conteo[d.valor] || 0) + 1; });
+    const filas = Object.entries(def.categorias).map(([k, nombre]) =>
+      `<div class="leyenda__fila"><span class="leyenda__caja" style="background:${def.colores[k]}"></span>${nombre} (${conteo[k] || 0})</div>`);
+    document.getElementById("leyenda").innerHTML = filas.join("");
+    estado.leyendaExport = Object.entries(def.categorias).map(([k, nombre]) => ({ forma: "caja", color: def.colores[k], texto: `${nombre} (${conteo[k] || 0})` }));
+    document.getElementById("tematico-metodo").textContent =
+      `Fuente: ${nombreFuente(def.fuente)}. Mapa categórico: cada entidad se pinta según el tipo de instrumento vigente, sin clases numéricas.`;
+    // Circles make no sense for categories: keep the buttons but force colors
+    estado.forma = "coropleta"; marcar("#sel-forma", "forma", "coropleta");
   }
 
   // Quantile breaks: robust to the heavy skew typical of these indicators
@@ -450,6 +505,10 @@
   }
 
   function etiquetaValor(nombre, d, unidad) {
+    if (typeof d.valor === "string") {
+      const def = estado.indicadores.definiciones.find(x => x.id === estado.indicador);
+      return `<strong>${nombre}</strong><br>${def && def.categorias ? def.categorias[d.valor] : d.valor}`;
+    }
     return `<strong>${nombre}</strong><br>${d.valor.toLocaleString("es-MX")} ${unidad} (${d.periodo})${d.ejemplo ? "<br><em>dato de ejemplo</em>" : ""}`;
   }
 
@@ -458,16 +517,31 @@
     const feat = estado.geos[estado.mapaId].features.find(f => claveDe(f.properties) === claveDe(p));
     const vals = estado.indicadores.valores.filter(v =>
       nivel === "municipio" ? v.cve_ent === p.cve_ent && v.cve_mun === p.cve_mun : v.cve_ent === p.cve_ent && !v.cve_mun);
-    const filas = vals.map(v => {
+    const filas = vals.filter(v => typeof v.valor === "number").map(v => {
       const d = estado.indicadores.definiciones.find(x => x.id === v.indicador);
       return `<li>${d.nombre}: <strong>${v.valor.toLocaleString("es-MX")}</strong> ${d.unidad} (${v.periodo})${v.ejemplo ? " <span class='badge badge--ejemplo'>ejemplo</span>" : ""}</li>`;
     }).join("");
+    const marco = nivel === "municipio" ? null : marcoDe(p.cve_ent);
+    let htmlMarco = "";
+    if (marco) {
+      const cat = estado.marcoLegal.categorias[marco.categoria];
+      const items = marco.instrumentos.map(i => {
+        const nombre = i.url ? `<a href="${i.url}" target="_blank" rel="noopener">${i.nombre}</a>` : i.nombre;
+        const meta = [i.tipo, i.anio, i.organo].filter(Boolean).join(" · ");
+        return `<li>${nombre}<br><small>${meta}${i.nota ? ". " + i.nota : ""}</small></li>`;
+      }).join("");
+      htmlMarco = `<h4 class="detalle__sub">Marco legal de protección</h4>
+        <p class="detalle__meta"><span class="leyenda__caja leyenda__caja--inline" style="background:${CONFIG.marcoLegalColores[marco.categoria]}"></span>${cat}</p>
+        ${items ? `<ul class="lista lista--marco">${items}</ul>` : ""}
+        ${marco.nota ? `<p class="nota">${marco.nota}</p>` : ""}`;
+    }
     const nEv = estado.eventos.filter(eventoVisible).filter(e => dentro([e.lon, e.lat], feat.geometry)).length;
     const clave = nivel === "municipio" ? `Clave INEGI ${p.cve_ent}${p.cve_mun}` : `Clave INEGI ${p.cve_ent}`;
     document.getElementById("detalle-cuerpo").innerHTML = `
       <h3 class="detalle__titulo">${p.nombre}</h3>
       <p class="detalle__meta">${clave} · ${nEv} eventos con los filtros actuales</p>
-      ${filas ? `<ul class="lista">${filas}</ul>` : "<p class='nota'>Sin indicadores cargados para esta unidad.</p>"}`;
+      ${filas ? `<ul class="lista">${filas}</ul>` : "<p class='nota'>Sin indicadores numéricos cargados para esta unidad.</p>"}
+      ${htmlMarco}`;
     document.getElementById("detalle").hidden = false;
   }
 

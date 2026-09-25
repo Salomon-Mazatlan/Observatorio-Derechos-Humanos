@@ -6,8 +6,14 @@ const CONFIG = {
   sitio: { nombre: "Observatorio de Derechos Humanos", autor: "", url: "" },
   rutas: {
     eventos: "datos/eventos.json",
-    indicadores: "datos/indicadores.json",
-    fuentes: "datos/fuentes.json"
+    indicadores: "datos/indicadores/indice.json",
+    fuentes: "datos/fuentes.json",
+    marcoLegal: "datos/marco_legal.json"
+  },
+  // Colors of the legal-framework categories, from strongest to weakest protection
+  marcoLegalColores: {
+    ley_propia: "#7f1d1d", vinculo_federal: "#b91c1c", solo_periodistas: "#e07a5f",
+    solo_fiscalia: "#f2b8a6", sin_instrumento: "#e2e5e9"
   },
   // Each map has its own polygon file and level of the values it can color
   mapas: {
