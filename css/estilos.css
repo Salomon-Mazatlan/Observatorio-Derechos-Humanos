@@ -87,6 +87,8 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .barra input[type="month"] { font: inherit; color: var(--tinta); border: 1px solid var(--borde); border-radius: 6px; padding: 4px 6px; width: 9.5em; }
 .barra__boton { font: inherit; background: var(--superficie); color: var(--tinta-suave); border: 1px solid var(--borde); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
 .barra__boton:hover { color: var(--tinta); }
+.barra__boton--principal { color: var(--tinta); border-color: var(--tinta); }
+.barra__boton--principal:disabled { opacity: .5; cursor: wait; }
 
 .temas { display: flex; flex-wrap: wrap; gap: 8px; }
 
