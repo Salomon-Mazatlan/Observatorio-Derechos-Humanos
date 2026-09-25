@@ -85,7 +85,14 @@ const Exportar = (() => {
 
   function dibujarVector(ctx, mapa, l) {
     const o = l.options;
-    if (l instanceof L.CircleMarker) {
+    if (o.etiqueta) {
+      const p = mapa.latLngToContainerPoint(l.getLatLng());
+      ctx.font = `500 11px ${SANS}`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.lineWidth = 3; ctx.strokeStyle = "rgba(255,255,255,0.9)"; ctx.lineJoin = "round";
+      ctx.strokeText(o.etiqueta, p.x, p.y);
+      ctx.fillStyle = "#1f2a37"; ctx.fillText(o.etiqueta, p.x, p.y);
+      ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+    } else if (l instanceof L.CircleMarker) {
       const p = mapa.latLngToContainerPoint(l.getLatLng());
       ctx.beginPath(); ctx.arc(p.x, p.y, l.getRadius(), 0, Math.PI * 2);
       pintar(ctx, o);

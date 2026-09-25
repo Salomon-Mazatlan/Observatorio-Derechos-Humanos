@@ -29,7 +29,11 @@
     }).addTo(mapa);
   }
 
+  // Labels sit above fills and markers but never catch the mouse
+  mapa.createPane("etiquetas").style.zIndex = 650;
+  mapa.getPane("etiquetas").style.pointerEvents = "none";
   const capaPoligonos = L.geoJSON(null, { style: estiloNeutro, onEachFeature: alPoligono }).addTo(mapa);
+  const capaEtiquetas = L.layerGroup().addTo(mapa);
   const capaCirculos = L.layerGroup().addTo(mapa);
   const capaEventos = L.layerGroup().addTo(mapa);
 
@@ -113,6 +117,7 @@
     });
     clases.value = String(estado.clases);
     clases.addEventListener("change", () => { estado.clases = +clases.value; dibujar(); });
+    document.getElementById("nombres").addEventListener("change", dibujar);
     document.getElementById("ventana-cerrar").addEventListener("click", cerrarVentana);
     document.addEventListener("keydown", e => { if (e.key === "Escape") cerrarVentana(); });
     document.querySelectorAll("button.enlace[data-doc]").forEach(b =>
@@ -121,6 +126,11 @@
     [desde, hasta].forEach(i => i.addEventListener("change", () => {
       estado.desde = mesValido(desde.value) ? desde.value : null;
       estado.hasta = mesValido(hasta.value) ? hasta.value : null;
+      // An inverted range would hide everything; move the other end instead
+      if (estado.desde && estado.hasta && estado.desde > estado.hasta) {
+        if (i === desde) { estado.hasta = estado.desde; hasta.value = estado.desde; }
+        else { estado.desde = estado.hasta; desde.value = estado.hasta; }
+      }
       dibujar();
     }));
     document.getElementById("periodo-todo").addEventListener("click", () => {
@@ -133,8 +143,8 @@
     const btn = document.getElementById("exportar");
     btn.disabled = true; btn.textContent = "Generando...";
     try {
-      const blob = await Exportar.png(mapa, [capaPoligonos, capaCirculos, capaEventos], infoExportacion());
-      Exportar.descargar(blob, `observatorio_${estado.mapaId}_${estado.vista === "eventos" ? "eventos" : estado.indicador}_${new Date().toISOString().slice(0, 10)}.png`);
+      const blob = await Exportar.png(mapa, [capaPoligonos, capaCirculos, capaEventos, capaEtiquetas], infoExportacion());
+      Exportar.descargar(blob, `observatorio_${estado.mapaId}_${estado.indicador || "eventos"}_${new Date().toISOString().slice(0, 10)}.png`);
     } catch (e) {
       alert("No se pudo exportar la imagen. Si el mapa base no permite copiar sus mosaicos, prueba con otro proveedor de mapa base.\n" + e.message);
     } finally {
@@ -147,7 +157,7 @@
     const m = CONFIG.mapas[estado.mapaId];
     const tematico = estado.indicador !== "";
     const def = !tematico ? null : estado.indicador === "_eventos"
-      ? { nombre: "Eventos registrados", fuente: null }
+      ? { nombre: "Eventos registrados", unidad: "eventos", fuente: null }
       : estado.indicadores.definiciones.find(d => d.id === estado.indicador);
     const titulo = tematico ? def.nombre : "Eventos registrados";
     const nivel = m.nivel === "municipio" ? "por municipio" : "por entidad";
@@ -239,6 +249,10 @@
   function cambiarVista(v) {
     estado.vista = v;
     marcar("#sel-vista", "vista", v);
+    if (v === "tematico" && !estado.indicador) {
+      estado.indicador = "_eventos";
+      document.getElementById("indicador").value = "_eventos";
+    }
     dibujar();
   }
 
@@ -316,7 +330,7 @@
 
   function iniciarFiltros() {
     document.getElementById("buscar").addEventListener("input", e => {
-      estado.texto = e.target.value.trim().toLowerCase();
+      estado.texto = normalizar(e.target.value);
       dibujar();
     });
   }
@@ -332,10 +346,30 @@
     document.getElementById("bloque-filtros").hidden = !conEventos && estado.indicador !== "_eventos";
     document.getElementById("bloque-tematico").hidden = !conIndicador;
     document.getElementById("eventos-encima").parentElement.hidden = estado.vista === "eventos";
+    const tp = textoPeriodo();
     document.getElementById("periodo-info").textContent =
-      (estado.desde || estado.hasta) ? "" : `Abarca ${textoPeriodo()}`;
+      (estado.desde || estado.hasta || tp === "sin datos") ? "" : `Abarca ${tp}`;
     if (conIndicador) dibujarTematico(); else capaPoligonos.setStyle(estiloNeutro);
     if (conEventos) dibujarEventos();
+    dibujarEtiquetas();
+  }
+
+  // One label per polygon, at the centroid of its bounds; hidden when "Nombres" is off
+  function centroDe(f) {
+    if (!f._centro) f._centro = L.geoJSON(f).getBounds().getCenter();
+    return f._centro;
+  }
+
+  function dibujarEtiquetas() {
+    capaEtiquetas.clearLayers();
+    if (!document.getElementById("nombres").checked) return;
+    estado.geos[estado.mapaId].features.forEach(f => {
+      const c = centroDe(f);
+      capaEtiquetas.addLayer(L.marker(c, {
+        pane: "etiquetas", interactive: false, etiqueta: f.properties.nombre,
+        icon: L.divIcon({ className: "etiqueta-poligono", html: `<span>${f.properties.nombre}</span>`, iconSize: [0, 0] })
+      }));
+    });
   }
 
   function hayEventosDibujados() {
@@ -349,7 +383,7 @@
     if (estado.desde && mes < estado.desde) return false;
     if (estado.hasta && mes > estado.hasta) return false;
     if (estado.texto) {
-      const blob = `${e.lugar} ${e.titulo} ${e.tipo} ${e.descripcion}`.toLowerCase();
+      const blob = normalizar(`${e.lugar} ${e.titulo} ${e.tipo} ${e.descripcion}`);
       if (!blob.includes(estado.texto)) return false;
     }
     return true;
@@ -394,9 +428,12 @@
       });
     } else {
       // Keep, per unit, the most recent value whose period falls inside the selected range
+      const def = estado.indicadores.definiciones.find(d => d.id === estado.indicador);
+      const acumulado = !!(def && (def.acumulado || def.tipo === "categoria"));
       valoresDe(estado.indicador, nivel).forEach(v => {
         const [ini, fin] = mesesDePeriodo(v.periodo);
-        if (estado.desde && fin < estado.desde) return;
+        // Stock indicators (accumulated counts, legal frameworks) stay valid after their cut date
+        if (estado.desde && fin < estado.desde && !acumulado) return;
         if (estado.hasta && ini > estado.hasta) return;
         const k = nivel === "municipio" ? v.cve_ent + v.cve_mun : v.cve_ent;
         if (!datos[k] || fin > mesesDePeriodo(datos[k].periodo)[1]) datos[k] = { valor: v.valor, periodo: v.periodo, ejemplo: !!v.ejemplo };
@@ -448,8 +485,8 @@
     if (estado.forma === "coropleta") {
       capaPoligonos.setStyle(f => {
         const d = datos[claveDe(f.properties)];
-        if (!d || d.valor === 0) return { ...estiloNeutro(), fillColor: CONFIG.colorSinDato, fillOpacity: 0.55 };
-        return { color: "#ffffff", weight: 1, fillColor: rampa[claseDe(d.valor, cortes)], fillOpacity: 0.85 };
+        if (!d || d.valor === 0) return { ...estiloNeutro(), color: "#3f4a5a", weight: 1, fillColor: CONFIG.colorSinDato, fillOpacity: 0.55 };
+        return { color: "#3f4a5a", weight: 1, fillColor: rampa[claseDe(d.valor, cortes)], fillOpacity: 0.8 };
       });
       dibujarLeyendaColores(cortes, rampa, def.unidad, valores.length);
       let prev = 0;
@@ -463,7 +500,7 @@
       estado.geos[estado.mapaId].features.forEach(f => {
         const d = datos[claveDe(f.properties)];
         if (!d || d.valor === 0) return;
-        const c = L.geoJSON(f).getBounds().getCenter();
+        const c = centroDe(f);
         const r = 5 + 30 * Math.sqrt(d.valor / max);
         const m = L.circleMarker(c, { radius: r, color, weight: 1, fillColor: color, fillOpacity: 0.35, dashArray: d.ejemplo ? "3 3" : null });
         m.bindTooltip(etiquetaValor(f.properties.nombre, d, def.unidad));
@@ -493,8 +530,8 @@
     }
     capaPoligonos.setStyle(f => {
       const d = datos[claveDe(f.properties)];
-      if (!d) return { ...estiloNeutro(), fillColor: CONFIG.colorSinDato, fillOpacity: 0.55 };
-      return { color: "#ffffff", weight: 1, fillColor: colores[d.valor] || CONFIG.colorSinDato, fillOpacity: 0.85 };
+      if (!d) return { ...estiloNeutro(), color: "#3f4a5a", weight: 1, fillColor: CONFIG.colorSinDato, fillOpacity: 0.55 };
+      return { color: "#3f4a5a", weight: 1, fillColor: colores[d.valor] || CONFIG.colorSinDato, fillOpacity: 0.8 };
     });
     const conteo = {};
     Object.values(datos).forEach(d => { conteo[d.valor] = (conteo[d.valor] || 0) + 1; });
@@ -695,6 +732,8 @@
   // ---------- misc helpers ----------
 
   function clase(v) { return v.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "-"); }
+  // Lowercase without accents, for searching
+  function normalizar(s) { return String(s).trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""); }
   function fmt(n) { return n.toLocaleString("es-MX"); }
   function nombreFuente(id) { const f = estado.fuentes.find(x => x.id === id); return f ? f.nombre : id; }
   function formatoFecha(iso) {
