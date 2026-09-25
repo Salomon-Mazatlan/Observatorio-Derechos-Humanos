@@ -1,0 +1,30 @@
+{
+  "definiciones": [
+    {"id": "mig_presentaciones", "tema": "migracion", "nombre": "Eventos de presentación ante autoridad migratoria", "unidad": "eventos", "fuente": "upm", "nota": "Un mismo individuo puede generar más de un evento"},
+    {"id": "mig_refugio", "tema": "migracion", "nombre": "Solicitudes de refugio recibidas", "unidad": "solicitudes", "fuente": "comar", "nota": "Por oficina de recepción; COMAR no tiene oficina en todas las entidades"},
+    {"id": "dfi_episodios", "tema": "desplazamiento", "nombre": "Episodios de desplazamiento masivo por violencia", "unidad": "episodios", "fuente": "cmdpdh", "nota": "Sólo episodios documentados en prensa; subregistro alto"},
+    {"id": "dfi_censo", "tema": "desplazamiento", "nombre": "Personas que migraron por inseguridad o violencia (2015-2020)", "unidad": "personas", "fuente": "inegi-censo", "nota": "Censo 2020, pregunta de causa de migración interna"},
+    {"id": "des_rnpdno", "tema": "desaparicion", "nombre": "Personas desaparecidas y no localizadas (acumulado)", "unidad": "personas", "fuente": "rnpdno", "nota": "Consultar con fecha de corte; el registro cambia a diario"},
+    {"id": "des_fosas", "tema": "desaparicion", "nombre": "Fosas clandestinas localizadas", "unidad": "fosas", "fuente": "fosas-quinto", "nota": "Periodo según base consultada"},
+    {"id": "per_beneficiarios", "tema": "periodistas", "nombre": "Personas beneficiarias del Mecanismo de Protección", "unidad": "personas", "fuente": "mecanismo", "nota": "Periodistas y personas defensoras; consultar informe mensual"},
+    {"id": "per_agresiones", "tema": "periodistas", "nombre": "Agresiones contra la prensa documentadas", "unidad": "agresiones", "fuente": "article19", "nota": "Informe anual de ARTICLE 19"}
+  ],
+  "valores": [
+    {"indicador": "des_rnpdno", "cve_ent": "25", "periodo": "2025", "valor": 1000, "ejemplo": true},
+    {"indicador": "des_rnpdno", "cve_ent": "14", "periodo": "2025", "valor": 3000, "ejemplo": true},
+    {"indicador": "des_rnpdno", "cve_ent": "28", "periodo": "2025", "valor": 2500, "ejemplo": true},
+    {"indicador": "des_rnpdno", "cve_ent": "15", "periodo": "2025", "valor": 2000, "ejemplo": true},
+    {"indicador": "dfi_episodios", "cve_ent": "25", "periodo": "2024", "valor": 12, "ejemplo": true},
+    {"indicador": "dfi_episodios", "cve_ent": "12", "periodo": "2024", "valor": 15, "ejemplo": true},
+    {"indicador": "dfi_episodios", "cve_ent": "16", "periodo": "2024", "valor": 9, "ejemplo": true},
+    {"indicador": "dfi_episodios", "cve_ent": "07", "periodo": "2024", "valor": 8, "ejemplo": true},
+    {"indicador": "per_beneficiarios", "cve_ent": "25", "periodo": "2025", "valor": 30, "ejemplo": true},
+    {"indicador": "per_beneficiarios", "cve_ent": "09", "periodo": "2025", "valor": 120, "ejemplo": true},
+    {"indicador": "per_beneficiarios", "cve_ent": "12", "periodo": "2025", "valor": 90, "ejemplo": true},
+    {"indicador": "per_beneficiarios", "cve_ent": "30", "periodo": "2025", "valor": 60, "ejemplo": true},
+    {"indicador": "mig_presentaciones", "cve_ent": "07", "periodo": "2025", "valor": 5000, "ejemplo": true},
+    {"indicador": "mig_presentaciones", "cve_ent": "28", "periodo": "2025", "valor": 2000, "ejemplo": true},
+    {"indicador": "mig_presentaciones", "cve_ent": "25", "periodo": "2025", "valor": 400, "ejemplo": true},
+    {"indicador": "mig_presentaciones", "cve_ent": "30", "periodo": "2025", "valor": 1500, "ejemplo": true}
+  ]
+}
