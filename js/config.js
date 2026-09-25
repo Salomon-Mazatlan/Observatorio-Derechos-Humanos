@@ -3,6 +3,8 @@ const CONFIG = {
   // Initial view: Sinaloa; change to [23.6, -102.5] / 5 for the whole country
   centro: [24.6, -107.2],
   zoom: 7,
+  // Free key from https://carto.com/basemaps/apikey; leave empty to use OpenStreetMap tiles
+  cartoKey: "",
   rutas: {
     eventos: "datos/eventos.json",
     indicadores: "datos/indicadores.json",

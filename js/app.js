@@ -14,10 +14,18 @@
 
   const mapa = L.map("mapa", { zoomControl: false }).setView(CONFIG.centro, CONFIG.zoom);
   L.control.zoom({ position: "bottomright" }).addTo(mapa);
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
-    maxZoom: 18
-  }).addTo(mapa);
+  // CARTO tiles need a key since Aug 2026; fall back to plain OSM without one
+  if (CONFIG.cartoKey) {
+    L.tileLayer(`https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=${CONFIG.cartoKey}`, {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      subdomains: "abcd", maxZoom: 18
+    }).addTo(mapa);
+  } else {
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      maxZoom: 18
+    }).addTo(mapa);
+  }
 
   const capaEstados = L.geoJSON(null, { style: estiloEstado, onEachFeature: alEstado }).addTo(mapa);
   const capaIndicador = L.layerGroup().addTo(mapa);
