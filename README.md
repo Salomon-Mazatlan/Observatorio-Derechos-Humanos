@@ -21,22 +21,6 @@ captura_eventos.xlsx       plantilla de captura (contiene los eventos publicados
 docs/indicadores.md        ficha metodológica de indicadores
 ```
 
-## Publicar en GitHub Pages
-
-1. Crear un repositorio (por ejemplo `observatorio-ddhh`) y subir estos archivos a la rama `main`.
-2. En Settings > Pages, elegir "Deploy from a branch", rama `main`, carpeta `/ (root)`.
-3. El sitio queda en `https://<usuario>.github.io/observatorio-ddhh/`.
-
-## Probar en local
-
-El navegador bloquea `fetch` de archivos locales, así que hay que servir la carpeta:
-
-```
-python -m http.server 8000
-```
-
-y abrir `http://localhost:8000`.
-
 ## Cómo agregar un evento
 
 Añadir un objeto a `datos/eventos.json`:
