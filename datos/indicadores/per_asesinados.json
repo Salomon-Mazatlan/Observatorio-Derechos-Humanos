@@ -1,0 +1,66 @@
+{
+ "definicion": {
+  "id": "per_asesinados",
+  "tema": "periodistas",
+  "nombre": "Periodistas asesinados en posible relación con su labor",
+  "unidad": "personas",
+  "fuente": "article19",
+  "nota": "2025 según ARTICLE 19; 2026 según RSF y CPJ hasta julio (falta un caso del recuento de RSF no identificado en prensa)"
+ },
+ "valores": [
+  {
+   "cve_ent": "15",
+   "periodo": "2025",
+   "valor": 1,
+   "ejemplo": false
+  },
+  {
+   "cve_ent": "11",
+   "periodo": "2025",
+   "valor": 2,
+   "ejemplo": false
+  },
+  {
+   "cve_ent": "12",
+   "periodo": "2025",
+   "valor": 2,
+   "ejemplo": false
+  },
+  {
+   "cve_ent": "26",
+   "periodo": "2025",
+   "valor": 1,
+   "ejemplo": false
+  },
+  {
+   "cve_ent": "10",
+   "periodo": "2025",
+   "valor": 1,
+   "ejemplo": false
+  },
+  {
+   "cve_ent": "30",
+   "periodo": "2026",
+   "valor": 3,
+   "ejemplo": false
+  },
+  {
+   "cve_ent": "12",
+   "periodo": "2026",
+   "valor": 1,
+   "ejemplo": false
+  },
+  {
+   "cve_ent": "21",
+   "periodo": "2026",
+   "valor": 1,
+   "ejemplo": false
+  },
+  {
+   "cve_ent": "20",
+   "periodo": "2026",
+   "valor": 1,
+   "ejemplo": false
+  }
+ ]
+}

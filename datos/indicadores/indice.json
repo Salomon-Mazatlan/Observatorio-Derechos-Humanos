@@ -1,0 +1,16 @@
+{
+ "descripcion": "Lista de archivos de indicadores que carga la página; cada archivo trae su definición y sus valores",
+ "archivos": [
+  "mig_presentaciones.json",
+  "mig_refugio.json",
+  "dfi_episodios.json",
+  "dfi_censo.json",
+  "des_rnpdno.json",
+  "des_fosas.json",
+  "per_beneficiarios.json",
+  "per_agresiones.json",
+  "dfi_ibero_2025.json",
+  "dfi_eic_pct.json",
+  "per_asesinados.json"
+ ]
+}
