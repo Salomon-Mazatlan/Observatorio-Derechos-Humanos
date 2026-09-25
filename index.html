@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Observatorio de Derechos Humanos</title>
-  <meta name="description" content="Mapa interactivo sobre migración, desplazamiento forzado, desaparición forzada y protección a periodistas y personas defensoras en México.">
+  <meta name="description" content="Mapa interactivo sobre migración, desplazamiento forzado, desaparición forzada y protección a periodistas y personas defensoras en México y Sinaloa.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap" rel="stylesheet">
@@ -15,15 +15,39 @@
 
 <a class="salto" href="#mapa">Ir al mapa</a>
 
+<header class="barra">
+  <h1 class="barra__titulo">Observatorio de Derechos Humanos</h1>
+
+  <div class="barra__grupo" role="group" aria-label="Mapa">
+    <span class="barra__etiqueta">Mapa</span>
+    <div class="segmentos" id="sel-mapa"></div>
+  </div>
+
+  <div class="barra__grupo" role="group" aria-label="Qué ver">
+    <span class="barra__etiqueta">Ver</span>
+    <div class="segmentos" id="sel-vista">
+      <button type="button" data-vista="eventos" aria-pressed="true">Eventos</button>
+      <button type="button" data-vista="tematico" aria-pressed="false">Mapa temático</button>
+    </div>
+  </div>
+
+  <div class="barra__grupo barra__grupo--tematico" id="grupo-indicador" hidden>
+    <label class="barra__etiqueta" for="indicador">Indicador</label>
+    <select id="indicador"></select>
+    <div class="segmentos" id="sel-forma">
+      <button type="button" data-forma="coropleta" aria-pressed="true">Colores</button>
+      <button type="button" data-forma="circulos" aria-pressed="false">Círculos</button>
+    </div>
+  </div>
+</header>
+
 <aside class="panel" id="panel">
-  <header class="panel__cabecera">
-    <h1 class="panel__titulo">Observatorio de Derechos Humanos</h1>
-    <p class="panel__bajada">Registro georreferenciado de migración, desplazamiento, desaparición y protección a periodistas y personas defensoras.</p>
-  </header>
+  <section class="bloque" id="bloque-temas">
+    <h2 class="bloque__titulo">Temas</h2>
+    <nav class="temas" id="temas" aria-label="Temas"></nav>
+  </section>
 
-  <nav class="temas" id="temas" aria-label="Temas"></nav>
-
-  <section class="bloque">
+  <section class="bloque" id="bloque-filtros">
     <h2 class="bloque__titulo">Filtrar eventos</h2>
     <label class="campo">
       <span>Buscar por lugar o título</span>
@@ -40,14 +64,12 @@
     <p class="conteo" id="conteo" aria-live="polite"></p>
   </section>
 
-  <section class="bloque">
-    <h2 class="bloque__titulo">Indicador por entidad</h2>
-    <label class="campo">
-      <span>Indicador</span>
-      <select id="indicador"><option value="">Ninguno</option></select>
-    </label>
-    <p class="nota" id="indicador-nota"></p>
-    <div class="leyenda" id="leyenda" hidden></div>
+  <section class="bloque" id="bloque-tematico" hidden>
+    <h2 class="bloque__titulo" id="tematico-titulo"></h2>
+    <p class="nota" id="tematico-nota"></p>
+    <div class="leyenda" id="leyenda"></div>
+    <label class="campo campo--inline"><input type="checkbox" id="eventos-encima"> Mostrar eventos encima</label>
+    <p class="nota" id="tematico-metodo"></p>
   </section>
 
   <section class="bloque bloque--detalle" id="detalle" hidden>

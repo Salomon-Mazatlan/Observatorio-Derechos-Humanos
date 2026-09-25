@@ -12,7 +12,9 @@ js/app.js                  lógica del mapa (capas, filtros, detalle)
 datos/eventos.json         eventos puntuales (marcadores)
 datos/indicadores.json     definiciones de indicadores y valores por entidad
 datos/fuentes.json         catálogo de fuentes
-datos/geo/estados.geojson  polígonos de las 32 entidades con clave INEGI
+datos/geo/estados.geojson  32 entidades (Marco Geoestadístico INEGI 2022, simplificado)
+datos/geo/sinaloa_municipios.geojson  18 municipios de Sinaloa (INEGI 2022, sin Eldorado ni Juan José Ríos)
+herramientas/actualizar_eventos.py  carga de eventos desde captura_eventos.xlsx
 docs/indicadores.md        ficha metodológica de indicadores
 ```
 
@@ -65,11 +67,19 @@ En `datos/indicadores.json`, dentro de `valores`:
 { "indicador": "des_rnpdno", "cve_ent": "25", "periodo": "2026-06-30", "valor": 0, "ejemplo": false }
 ```
 
-`cve_ent` es la clave INEGI de la entidad (dos dígitos, Sinaloa es `25`).
+`cve_ent` es la clave INEGI de la entidad (dos dígitos, Sinaloa es `25`). Para un valor municipal (mapa de Sinaloa) se añade `"cve_mun": "006"` con la clave de tres dígitos del municipio; los valores sin `cve_mun` alimentan el mapa de México y los que lo traen alimentan el de Sinaloa.
+
+## Mapas temáticos
+
+El menú superior permite elegir el mapa (México por entidad, Sinaloa por municipio) y qué ver (eventos o un indicador). Un indicador se pinta por colores (coropleta) o por círculos proporcionales. La coropleta usa cinco clases por cuantiles: se ordenan las unidades con dato y cada clase recibe aproximadamente la misma cantidad de unidades. Se eligió este método porque los indicadores del observatorio son muy asimétricos (pocas entidades concentran la mayoría de los casos) y con intervalos iguales casi todo el mapa quedaría en la clase más baja. Cero y sin dato van en gris.
+
+La opción "Eventos registrados (conteo)" cuenta, dentro de cada polígono, los eventos visibles con los filtros activos.
+
+Para tasas por 100 mil habitantes hay que llenar `poblacion` en `datos/indicadores.json` con `{"cve_ent": "25", "cve_mun": "006", "valor": 0}` (CONAPO o Censo); esa vista queda pendiente en el código.
 
 ## Pendientes
 
-- Municipios de Sinaloa (GeoJSON del Marco Geoestadístico de INEGI).
-- Carga de datos desde CSV para facilitar la captura.
+- Tasas por 100 mil habitantes (requiere `poblacion`).
+- Actualizar el GeoJSON de Sinaloa con los 20 municipios cuando INEGI publique el marco con Eldorado y Juan José Ríos.
 - Línea de tiempo y gráficas por indicador.
 - Exportación de los datos filtrados.
