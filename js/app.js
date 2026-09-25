@@ -267,7 +267,7 @@
       b.type = "button"; b.className = "tema"; b.dataset.tema = id;
       b.style.setProperty("--tema", t.color);
       b.innerHTML = `<span class="tema__punto"></span>${t.nombre}`;
-      b.addEventListener("click", () => { estado.tema = (estado.tema === id && id !== "todos") ? "todos" : id; pintarTemas(); construirIndicadores(); dibujar(); });
+      b.addEventListener("click", () => { estado.tema = (estado.tema === id && id !== "todos") ? "todos" : id; pintarTemas(); construirIndicadores(); construirFuentes(); cerrarVentana(); dibujar(); });
       cont.appendChild(b);
     });
     pintarTemas();
@@ -318,9 +318,11 @@
     sel.onchange = () => { estado.indicador = sel.value; dibujar(); };
   }
 
+  // Source list follows the active theme (context sources, such as press, always show)
   function construirFuentes() {
     const ul = document.getElementById("fuentes");
-    estado.fuentes.forEach(f => {
+    ul.innerHTML = "";
+    estado.fuentes.filter(f => temaActivo(f.tema) || f.tema === "contexto").forEach(f => {
       const li = document.createElement("li");
       const nombre = f.url ? `<a href="${f.url}" target="_blank" rel="noopener">${f.nombre}</a>` : f.nombre;
       li.innerHTML = `${nombre}<br><small>${CONFIG.tiposFuente[f.tipo] || f.tipo} · ${f.periodicidad} · ${f.nivel}</small>`;
@@ -443,17 +445,24 @@
     } else {
       // Keep, per unit, the most recent value whose period falls inside the selected range
       const def = estado.indicadores.definiciones.find(d => d.id === estado.indicador);
-      const acumulado = !!(def && (def.acumulado || def.tipo === "categoria"));
       valoresDe(estado.indicador, nivel).forEach(v => {
-        const [ini, fin] = mesesDePeriodo(v.periodo);
-        // Stock indicators (accumulated counts, legal frameworks) stay valid after their cut date
-        if (estado.desde && fin < estado.desde && !acumulado) return;
-        if (estado.hasta && ini > estado.hasta) return;
+        if (!valorEnRango(v, def)) return;
+        const [, fin] = mesesDePeriodo(v.periodo);
         const k = nivel === "municipio" ? v.cve_ent + v.cve_mun : v.cve_ent;
         if (!datos[k] || fin > mesesDePeriodo(datos[k].periodo)[1]) datos[k] = { valor: v.valor, periodo: v.periodo, ejemplo: !!v.ejemplo };
       });
     }
     return datos;
+  }
+
+  // A value counts if its period overlaps the selected range; stock indicators
+  // (accumulated counts, legal frameworks) stay valid after their cut date
+  function valorEnRango(v, def) {
+    const acumulado = !!(def && (def.acumulado || def.tipo === "categoria"));
+    const [ini, fin] = mesesDePeriodo(v.periodo);
+    if (estado.desde && fin < estado.desde && !acumulado) return false;
+    if (estado.hasta && ini > estado.hasta) return false;
+    return true;
   }
 
   // Period covered by a value, as [first month, last month]: "2025" -> whole year, "2025-06-30" -> that month
@@ -686,13 +695,17 @@
   function mostrarDetallePoligono(p) {
     const nivel = CONFIG.mapas[estado.mapaId].nivel;
     const feat = estado.geos[estado.mapaId].features.find(f => claveDe(f.properties) === claveDe(p));
-    const vals = estado.indicadores.valores.filter(v =>
-      nivel === "municipio" ? v.cve_ent === p.cve_ent && v.cve_mun === p.cve_mun : v.cve_ent === p.cve_ent && !v.cve_mun);
-    const filas = vals.filter(v => typeof v.valor === "number").map(v => {
-      const d = estado.indicadores.definiciones.find(x => x.id === v.indicador);
-      return `<li>${d.nombre}: <strong>${v.valor.toLocaleString("es-MX")}</strong> ${d.unidad} (${v.periodo})${v.ejemplo ? " <span class='badge badge--ejemplo'>ejemplo</span>" : ""}</li>`;
+    // Only numeric values of the active theme, inside the selected period, newest first
+    const defs = Object.fromEntries(estado.indicadores.definiciones.map(d => [d.id, d]));
+    const vals = estado.indicadores.valores
+      .filter(v => nivel === "municipio" ? v.cve_ent === p.cve_ent && v.cve_mun === p.cve_mun : v.cve_ent === p.cve_ent && !v.cve_mun)
+      .filter(v => typeof v.valor === "number" && defs[v.indicador] && temaActivo(defs[v.indicador].tema) && valorEnRango(v, defs[v.indicador]))
+      .sort((x, y) => x.indicador.localeCompare(y.indicador) || String(y.periodo).localeCompare(String(x.periodo)));
+    const filas = vals.map(v => {
+      const d = defs[v.indicador];
+      return `<li><span class="detalle__tema" style="--tema:${CONFIG.temas[d.tema].color}">${CONFIG.temas[d.tema].nombre}</span><br>${d.nombre}: <strong>${v.valor.toLocaleString("es-MX")}</strong> ${d.unidad} (${v.periodo})${v.ejemplo ? " <span class='badge badge--ejemplo'>ejemplo</span>" : ""}</li>`;
     }).join("");
-    const marco = nivel === "municipio" ? null : marcoDe(p.cve_ent);
+    const marco = nivel === "municipio" || !temaActivo("periodistas") ? null : marcoDe(p.cve_ent);
     let htmlMarco = "";
     if (marco) {
       const cat = estado.marcoLegal.categorias[marco.categoria];
@@ -710,7 +723,7 @@
     const clave = nivel === "municipio" ? `Clave INEGI ${p.cve_ent}${p.cve_mun}` : `Clave INEGI ${p.cve_ent}`;
     abrirVentana(p.nombre, `
       <p class="detalle__meta">${clave} · ${nEv} eventos con los filtros actuales</p>
-      ${filas ? `<ul class="lista">${filas}</ul>` : "<p class='nota'>Sin indicadores numéricos cargados para esta unidad.</p>"}
+      ${filas ? `<ul class="lista lista--detalle">${filas}</ul>` : `<p class='nota'>Sin indicadores numéricos para esta unidad con el tema y periodo actuales${estado.tema === "todos" ? "" : " (tema " + CONFIG.temas[estado.tema].nombre + ")"}.</p>`}
       ${htmlMarco}`);
   }
 
