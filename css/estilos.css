@@ -88,6 +88,13 @@ a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible
 .barra__boton { font: inherit; background: var(--superficie); color: var(--tinta-suave); border: 1px solid var(--borde); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
 .barra__boton:hover { color: var(--tinta); }
 .barra__boton--principal { color: var(--tinta); border-color: var(--tinta); }
+.barra__casilla { display: inline-flex; align-items: center; gap: 4px; color: var(--tinta); }
+.etiqueta-poligono { pointer-events: none; }
+.etiqueta-poligono span {
+  display: inline-block; white-space: nowrap; transform: translate(-50%, -50%);
+  font: 500 11px var(--sans); color: var(--tinta);
+  text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 0 3px #fff, 0 0 3px #fff;
+}
 .barra__boton--principal:disabled { opacity: .5; cursor: wait; }
 
 .temas { display: flex; flex-wrap: wrap; gap: 8px; }
