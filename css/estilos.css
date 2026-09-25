@@ -182,6 +182,10 @@ input[type="search"], input[type="number"], select {
 .detalle__meta { margin: 0 0 8px; color: var(--tinta-suave); font-size: 13px; }
 .bloque--detalle p { margin: 0 0 8px; }
 .lista { margin: 0; padding-left: 18px; }
+.lista--marco li { margin-bottom: 6px; }
+.lista--marco small { color: var(--tinta-suave); }
+.detalle__sub { font-family: var(--serif); font-weight: 500; font-size: 16px; margin: 12px 0 4px; }
+.leyenda__caja--inline { display: inline-block; vertical-align: middle; margin-right: 6px; width: 14px; height: 10px; }
 
 .fuentes { margin: 8px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; }
 .fuentes small { color: var(--tinta-suave); }
