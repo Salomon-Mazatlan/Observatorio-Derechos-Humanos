@@ -31,13 +31,21 @@
     </div>
   </div>
 
-  <div class="barra__grupo barra__grupo--tematico" id="grupo-indicador" hidden>
+  <div class="barra__grupo" id="grupo-indicador">
     <label class="barra__etiqueta" for="indicador">Indicador</label>
-    <select id="indicador"></select>
+    <select id="indicador" disabled></select>
     <div class="segmentos" id="sel-forma">
-      <button type="button" data-forma="coropleta" aria-pressed="true">Colores</button>
-      <button type="button" data-forma="circulos" aria-pressed="false">Círculos</button>
+      <button type="button" data-forma="coropleta" aria-pressed="true" disabled>Colores</button>
+      <button type="button" data-forma="circulos" aria-pressed="false" disabled>Círculos</button>
     </div>
+  </div>
+
+  <div class="barra__grupo" role="group" aria-label="Periodo">
+    <span class="barra__etiqueta">Periodo</span>
+    <input type="month" id="desde" aria-label="Desde" placeholder="AAAA-MM">
+    <span class="barra__etiqueta">a</span>
+    <input type="month" id="hasta" aria-label="Hasta" placeholder="AAAA-MM">
+    <button type="button" class="barra__boton" id="periodo-todo">Todo</button>
   </div>
 </header>
 
@@ -53,10 +61,6 @@
       <span>Buscar por lugar o título</span>
       <input type="search" id="buscar" placeholder="Ej. Culiacán, albergue, fosa">
     </label>
-    <div class="campo campo--doble">
-      <label><span>Desde</span><input type="number" id="anio-min" min="2000" max="2100" step="1"></label>
-      <label><span>Hasta</span><input type="number" id="anio-max" min="2000" max="2100" step="1"></label>
-    </div>
     <fieldset class="campo">
       <legend>Nivel de verificación</legend>
       <div class="verif" id="verif"></div>

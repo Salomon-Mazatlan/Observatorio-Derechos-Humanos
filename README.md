@@ -73,6 +73,8 @@ En `datos/indicadores.json`, dentro de `valores`:
 
 El menú superior permite elegir el mapa (México por entidad, Sinaloa por municipio) y qué ver (eventos o un indicador). Un indicador se pinta por colores (coropleta) o por círculos proporcionales. La coropleta usa cinco clases por cuantiles: se ordenan las unidades con dato y cada clase recibe aproximadamente la misma cantidad de unidades. Se eligió este método porque los indicadores del observatorio son muy asimétricos (pocas entidades concentran la mayoría de los casos) y con intervalos iguales casi todo el mapa quedaría en la clase más baja. Cero y sin dato van en gris.
 
+El selector de periodo (mes inicial y final) filtra los eventos por fecha. Sobre los indicadores actúa así: se conservan los valores cuyo periodo se traslapa con el rango y, si una unidad tiene varios, se muestra el más reciente. Un valor anual ("2025") cubre todo el año; un valor con fecha ("2025-06-30") cubre ese mes.
+
 La opción "Eventos registrados (conteo)" cuenta, dentro de cada polígono, los eventos visibles con los filtros activos.
 
 Para tasas por 100 mil habitantes hay que llenar `poblacion` en `datos/indicadores.json` con `{"cve_ent": "25", "cve_mun": "006", "valor": 0}` (CONAPO o Censo); esa vista queda pendiente en el código.
