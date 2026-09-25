@@ -9,6 +9,7 @@ index.html                 página única con el mapa y el panel lateral
 css/estilos.css            estilos
 js/config.js               temas, colores, rutas y niveles de verificación
 js/app.js                  lógica del mapa (capas, filtros, detalle)
+js/exportar.js             exportación a PNG con título, leyenda, norte, escala y créditos
 datos/eventos.json         eventos puntuales (marcadores)
 datos/indicadores.json     definiciones de indicadores y valores por entidad
 datos/fuentes.json         catálogo de fuentes
@@ -78,6 +79,10 @@ El selector de periodo (mes inicial y final) filtra los eventos por fecha. Sobre
 La opción "Eventos registrados (conteo)" cuenta, dentro de cada polígono, los eventos visibles con los filtros activos.
 
 Para tasas por 100 mil habitantes hay que llenar `poblacion` en `datos/indicadores.json` con `{"cve_ent": "25", "cve_mun": "006", "valor": 0}` (CONAPO o Censo); esa vista queda pendiente en el código.
+
+## Exportar a PNG
+
+El botón "Exportar PNG" genera una imagen a doble resolución de la vista actual con título, subtítulo (mapa y periodo), leyenda, flecha de norte, barra de escala y créditos. No usa librerías externas: copia los mosaicos del mapa base desde la página y vuelve a dibujar polígonos y marcadores. El pie lista todas las fuentes activas en la vista (la del indicador y las de cada evento visible) y una línea "Cómo citar" con autor, año, título, fecha y dirección de la página. El autor y la dirección se configuran en `js/config.js` (`sitio`); si la dirección se deja vacía se usa la de la página publicada. Para que el navegador permita copiar los mosaicos, el proveedor del mapa base debe aceptar CORS (OpenStreetMap y CARTO lo hacen). Si se cambia a otro proveedor y la exportación falla, esa es la causa.
 
 ## Pendientes
 
